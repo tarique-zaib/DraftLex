@@ -1,0 +1,14 @@
+﻿using DraftLex.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace DraftLex.Application.Interfaces;
+
+public interface IDraftLexDbContext
+{
+    DbSet<Matter> Matters { get; }
+    DbSet<Client> Clients { get; }
+    DbSet<Hearing> Hearings { get; }
+    DbSet<TimelineEvent> TimelineEvents { get; }
+
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+}

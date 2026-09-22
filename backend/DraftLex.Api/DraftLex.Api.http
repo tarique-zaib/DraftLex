@@ -1,0 +1,11 @@
+@DraftLex.Api_HostAddress = http://localhost:5073
+
+GET {{DraftLex.Api_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###
+
+GET {{DraftLex.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

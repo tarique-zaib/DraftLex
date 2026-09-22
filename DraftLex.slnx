@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="backend/DraftLex.Api/DraftLex.Api.csproj" />
+  <Project Path="backend/DraftLex.Application/DraftLex.Application.csproj" />
+  <Project Path="backend/DraftLex.Domain/DraftLex.Domain.csproj" />
+  <Project Path="backend/DraftLex.Infrastructure/DraftLex.Infrastructure.csproj" />
+  <Project Path="backend/DraftLex.Tests/DraftLex.Tests.csproj" />
+</Solution>
