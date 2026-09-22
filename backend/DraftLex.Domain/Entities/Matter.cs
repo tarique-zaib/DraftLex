@@ -4,6 +4,8 @@ public class Matter
 {
     public Guid Id { get; set; }
 
+    
+
     public string MatterNumber { get; set; } = string.Empty;
 
     public Guid ClientId { get; set; }

@@ -6,6 +6,10 @@ using DraftLex.Infrastructure.Repositories;
 using MediatR;
 using DraftLex.Application;
 using Microsoft.EntityFrameworkCore;
+using DraftLex.Application.Common.Security;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +39,32 @@ builder.Services.AddScoped<IDraftLexDbContext>(provider =>
 
 var app = builder.Build();
 
+builder.Services.Configure<JwtSettings>(
+    builder.Configuration.GetSection("Jwt"));
+
+var jwt = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            ValidIssuer = jwt.Issuer,
+            ValidAudience = jwt.Audience,
+
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwt.Key))
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 // -------------------------
 // Middleware
 // -------------------------
@@ -46,6 +76,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
 
 app.UseAuthorization();
 

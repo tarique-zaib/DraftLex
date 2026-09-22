@@ -4,6 +4,9 @@ public class Client
 {
     public Guid Id { get; set; }
 
+    // Nullable until authentication is wired in
+    
+
     public string ClientCode { get; set; } = string.Empty;
 
     public string FullName { get; set; } = string.Empty;
