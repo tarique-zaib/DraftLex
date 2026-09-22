@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Users, Scale, CalendarDays, FileText } from "lucide-react";
-import { api } from "../api/client";
 import { Link } from "react-router-dom";
+import api from "../api/client";
+import UserMenu from "../components/UserMenu";
+import Sidebar from "../components/Sidebar";
 import "../index.css";
 
 function StatCard({
@@ -11,15 +14,16 @@ function StatCard({
 }: {
   title: string;
   value: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }) {
   return (
-    <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-slate-500">{title}</p>
           <h2 className="mt-2 text-3xl font-bold text-slate-800">{value}</h2>
         </div>
+
         <div className="rounded-lg bg-blue-50 p-3 text-blue-700">{icon}</div>
       </div>
     </div>
@@ -33,6 +37,7 @@ export default function Dashboard() {
     hearings: 0,
     documents: 0,
   });
+
   const [matters, setMatters] = useState<any[]>([]);
   const [hearings, setHearings] = useState<any[]>([]);
 
@@ -61,35 +66,16 @@ export default function Dashboard() {
 
     loadDashboard();
   }, []);
+
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-slate-900 text-white min-h-screen p-6">
-          <h1 className="text-2xl font-bold text-blue-400">DraftLex</h1>
-          <p className="text-sm text-slate-400 mt-1">Advocate Workspace</p>
-
-          <nav className="mt-10 space-y-2">
-            {[
-              "Dashboard",
-              "Clients",
-              "Matters",
-              "Hearings",
-              "Documents",
-              "AI Drafts",
-            ].map((item) => (
-              <button
-                key={item}
-                className="w-full rounded-lg px-4 py-3 text-left hover:bg-slate-800"
-              >
-                {item}
-              </button>
-            ))}
-          </nav>
-        </aside>
+        <Sidebar />
 
         {/* Main Content */}
         <main className="flex-1 p-8">
+          {/* Header */}
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">
@@ -100,9 +86,13 @@ export default function Dashboard() {
               </p>
             </div>
 
-            <button className="rounded-lg bg-blue-600 px-5 py-3 font-medium text-white hover:bg-blue-700">
-              + Generate AI Draft
-            </button>
+            <div className="flex items-center gap-3">
+              <button className="rounded-lg bg-blue-600 px-5 py-3 font-medium text-white transition hover:bg-blue-700">
+                + Generate AI Draft
+              </button>
+
+              <UserMenu />
+            </div>
           </div>
 
           {/* Stats */}
@@ -132,9 +122,10 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Two-column section */}
+          {/* Recent Matters & Hearings */}
           <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
+            {/* Recent Matters */}
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-xl font-semibold">Recent Matters</h2>
 
               <div className="space-y-3">
@@ -147,12 +138,13 @@ export default function Dashboard() {
                     <Link
                       key={m.id}
                       to={`/matters/${m.id}`}
-                      className="block rounded-lg border border-slate-200 p-4 hover:bg-slate-50 transition"
+                      className="flex items-center justify-between rounded-lg border border-slate-200 p-4 transition hover:bg-slate-50"
                     >
                       <div>
                         <p className="font-semibold text-slate-800">
                           {m.title}
                         </p>
+
                         <p className="text-sm text-slate-500">
                           {m.matterNumber}
                         </p>
@@ -167,7 +159,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="rounded-xl bg-white p-6 shadow-sm border border-slate-200">
+            {/* Upcoming Hearings */}
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-xl font-semibold">Upcoming Hearings</h2>
 
               <div className="space-y-3">
@@ -179,12 +172,13 @@ export default function Dashboard() {
                   hearings.map((h) => (
                     <div
                       key={h.id}
-                      className="flex items-center justify-between rounded-lg border border-slate-200 p-4 hover:bg-slate-50"
+                      className="flex items-center justify-between rounded-lg border border-slate-200 p-4 transition hover:bg-slate-50"
                     >
                       <div>
                         <p className="font-semibold text-slate-800">
                           {h.stage}
                         </p>
+
                         <p className="text-sm text-slate-500">
                           {new Date(h.hearingDate).toLocaleDateString("en-IN", {
                             day: "2-digit",
@@ -192,6 +186,7 @@ export default function Dashboard() {
                             year: "numeric",
                           })}
                         </p>
+
                         <p className="text-xs text-slate-400">
                           {h.judgeName || "Judge TBD"} •{" "}
                           {h.courtRoom || "Court TBD"}

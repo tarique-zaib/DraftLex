@@ -1,4 +1,4 @@
-import { api } from "./client";
+import api from "./client";
 
 export const getHearingsByMatter = async (matterId: string) => {
   const response = await api.get("/Hearings");
