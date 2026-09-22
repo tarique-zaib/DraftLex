@@ -25,6 +25,16 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // Database
 builder.Services.AddDbContext<DraftLexDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DraftLexDb")));
@@ -80,6 +90,8 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 // -------------------------
 
 var app = builder.Build();
+
+app.UseCors("Frontend");
 
 // -------------------------
 // Middleware

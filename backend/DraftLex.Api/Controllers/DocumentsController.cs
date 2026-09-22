@@ -55,4 +55,11 @@ public class DocumentsController : ControllerBase
 
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
+
+    [HttpGet("matter/{matterId:guid}")]
+    public async Task<ActionResult<List<DocumentResponse>>> GetByMatter(Guid matterId)
+    {
+        var documents = await _service.GetByMatterAsync(matterId);
+        return Ok(documents);
+    }
 }
