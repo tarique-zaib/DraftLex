@@ -1,15 +1,18 @@
-﻿using System.Net;
-using DraftLex.Api.Common;
+﻿using System.Text.Json;
 
 namespace DraftLex.Api.Middleware;
 
 public class ExceptionMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<ExceptionMiddleware> _logger;
 
-    public ExceptionMiddleware(RequestDelegate next)
+    public ExceptionMiddleware(
+        RequestDelegate next,
+        ILogger<ExceptionMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task Invoke(HttpContext context)
@@ -18,18 +21,19 @@ public class ExceptionMiddleware
         {
             await _next(context);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            _logger.LogError(ex, "Unhandled exception");
+
+            context.Response.StatusCode = 500;
             context.Response.ContentType = "application/json";
 
-            var response = new ApiResponse<object>
-            {
-                Success = false,
-                Message = "An unexpected error occurred."
-            };
-
-            await context.Response.WriteAsJsonAsync(response);
+            await context.Response.WriteAsync(
+                JsonSerializer.Serialize(new
+                {
+                    error = ex.Message,
+                    stackTrace = ex.StackTrace
+                }));
         }
     }
 }

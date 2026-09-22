@@ -1,4 +1,5 @@
-﻿using DraftLex.Application.Interfaces;
+﻿using DocumentFormat.OpenXml.InkML;
+using DraftLex.Application.Interfaces;
 using DraftLex.Domain.Entities;
 using DraftLex.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +30,14 @@ public class LegalDocumentRepository : ILegalDocumentRepository
         return await _db.LegalDocuments
             .Where(x => x.MatterId == matterId)
             .OrderByDescending(x => x.UpdatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<LegalDocument>> GetAllAsync()
+    {
+        return await _db.LegalDocuments
+            .Include(d => d.Matter)
+            .OrderByDescending(d => d.UpdatedAt)
             .ToListAsync();
     }
 

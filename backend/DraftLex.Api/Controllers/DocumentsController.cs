@@ -1,4 +1,5 @@
-﻿using DraftLex.Application.Features.Documents.DTOs;
+﻿using DraftLex.Application.Features.Documents;
+using DraftLex.Application.Features.Documents.DTOs;
 using DraftLex.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -48,18 +49,25 @@ public class DocumentsController : ControllerBase
     }
 
     [HttpPost("generate")]
-    public async Task<ActionResult<DocumentResponse>> Generate(
-    GenerateDocumentRequest request)
+    public async Task<IActionResult> Generate(
+    [FromBody] GenerateDocumentRequest request)
     {
-        var result = await _service.GenerateAsync(request);
+        var document = await _service.GenerateAsync(request);
 
-        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+        return Ok(new { id = document.Id });
     }
 
     [HttpGet("matter/{matterId:guid}")]
     public async Task<ActionResult<List<DocumentResponse>>> GetByMatter(Guid matterId)
     {
         var documents = await _service.GetByMatterAsync(matterId);
+        return Ok(documents);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var documents = await _service.GetAllAsync();
         return Ok(documents);
     }
 }

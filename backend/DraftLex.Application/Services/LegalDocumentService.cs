@@ -1,4 +1,7 @@
-﻿using DraftLex.Application.Common.AI;
+﻿using System.Linq;
+using Microsoft.EntityFrameworkCore;
+using DraftLex.Application.Common.AI;
+using DraftLex.Application.Features.Documents;
 using DraftLex.Application.Features.Documents.DTOs;
 using DraftLex.Application.Interfaces;
 using DraftLex.Domain.Entities;
@@ -84,45 +87,40 @@ public class LegalDocumentService
         return true;
     }
 
-    private static DocumentResponse Map(LegalDocument document)
-    {
-        return new DocumentResponse
-        {
-            Id = document.Id,
-            MatterId = document.MatterId,
-            Title = document.Title,
-            DocumentType = document.DocumentType,
-            Content = document.Content,
-            Version = document.Version,
-            Status = document.Status,
-            UpdatedAt = document.UpdatedAt
-        };
-    }
-
+    // Generate AI Document
     public async Task<DocumentResponse> GenerateAsync(GenerateDocumentRequest request)
     {
-        var matter = await _db.Matters.FindAsync(request.MatterId);
+        var matter = await _db.Matters
+            .Where(m => m.Title == request.MatterTitle)
+            .FirstOrDefaultAsync();
 
-        if (matter == null)
-            throw new ArgumentException("Matter not found.");
+        var clientName = request.ClientName;
+        var matterTitle = request.MatterTitle;
+        var court = request.Court;
 
-        var client = await _db.Clients.FindAsync(matter.ClientId);
+        if (matter != null)
+        {
+            var client = await _db.Clients.FindAsync(matter.ClientId);
 
-        if (client == null)
-            throw new ArgumentException("Client not found.");
+            if (client != null)
+                clientName = client.FullName;
+
+            matterTitle = matter.Title;
+            court = matter.Court;
+        }
 
         var content = await _ai.GenerateLegalDraftAsync(
             request.DocumentType,
-            client.FullName,
-            matter.Title,
-            matter.Court,
+            clientName,
+            matterTitle,
+            court,
             request.Facts);
 
         var document = new LegalDocument
         {
             Id = Guid.NewGuid(),
-            MatterId = matter.Id,
-            Title = $"{request.DocumentType} - {client.FullName}",
+            MatterId = matter?.Id ?? Guid.Empty,
+            Title = $"{request.DocumentType.ToUpper()} - {clientName.ToUpper()}",
             DocumentType = request.DocumentType,
             Content = content,
             Version = 1,
@@ -137,4 +135,26 @@ public class LegalDocumentService
         return Map(document);
     }
 
+    // Get All Documents
+    public async Task<List<DocumentResponse>> GetAllAsync()
+    {
+        var documents = await _repo.GetAllAsync();
+
+        return documents.Select(Map).ToList();
+    }
+
+    private static DocumentResponse Map(LegalDocument document)
+    {
+        return new DocumentResponse
+        {
+            Id = document.Id,
+            MatterId = document.MatterId,
+            Title = document.Title,
+            DocumentType = document.DocumentType,
+            Content = document.Content,
+            Version = document.Version,
+            Status = document.Status,
+            UpdatedAt = document.UpdatedAt
+        };
+    }
 }

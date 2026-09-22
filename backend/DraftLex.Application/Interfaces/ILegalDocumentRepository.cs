@@ -12,5 +12,7 @@ public interface ILegalDocumentRepository
 
     Task UpdateAsync(LegalDocument document);
 
+    Task<List<LegalDocument>> GetAllAsync();
+
     Task SaveChangesAsync();
 }
