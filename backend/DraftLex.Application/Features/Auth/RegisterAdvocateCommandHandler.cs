@@ -33,6 +33,8 @@ public class RegisterAdvocateCommandHandler
             Email = request.Email,
             Mobile = request.Mobile,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Role = "Advocate",
+            IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
 

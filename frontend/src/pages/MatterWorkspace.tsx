@@ -243,7 +243,10 @@ export default function MatterWorkspace() {
                       </p>
                     </div>
 
-                    <button className="rounded-lg border px-3 py-1 text-sm hover:bg-slate-100">
+                    <button
+                      onClick={() => navigate(`/documents/${d.id}`)}
+                      className="rounded-lg border px-3 py-1 text-sm hover:bg-slate-100"
+                    >
                       Open
                     </button>
                   </div>
