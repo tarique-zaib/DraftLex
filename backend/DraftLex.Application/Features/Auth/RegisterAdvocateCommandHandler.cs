@@ -4,7 +4,7 @@ using DraftLex.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace DraftLex.Application.Features.Auth.Register;
+namespace DraftLex.Application.Features.Auth;
 
 public class RegisterAdvocateCommandHandler
     : IRequestHandler<RegisterAdvocateCommand, Guid>

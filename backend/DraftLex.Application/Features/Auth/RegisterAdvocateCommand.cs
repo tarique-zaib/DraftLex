@@ -1,6 +1,6 @@
 ﻿using MediatR;
 
-namespace DraftLex.Application.Features.Auth.Register;
+namespace DraftLex.Application.Features.Auth;
 
 public record RegisterAdvocateCommand(
     string FullName,

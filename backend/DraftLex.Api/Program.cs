@@ -1,13 +1,14 @@
 using DraftLex.Api.Middleware;
+using DraftLex.Application.Common.Security;
+using DraftLex.Application.Features.Auth;
 using DraftLex.Application.Interfaces;
 using DraftLex.Application.Services;
 using DraftLex.Infrastructure.Persistence;
 using DraftLex.Infrastructure.Repositories;
+using DraftLex.Infrastructure.Security;
 using MediatR;
-using DraftLex.Application;
-using Microsoft.EntityFrameworkCore;
-using DraftLex.Application.Common.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -22,30 +23,29 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Database
 builder.Services.AddDbContext<DraftLexDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DraftLexDb")));
 
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(DraftLex.Application.Services.ClientService).Assembly));
+builder.Services.AddScoped<IDraftLexDbContext>(sp =>
+    sp.GetRequiredService<DraftLexDbContext>());
 
+// Application Services
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<ClientService>();
-builder.Services.AddScoped<IDraftLexDbContext>(provider =>
-    provider.GetRequiredService<DraftLexDbContext>());
 
-// -------------------------
-// Build
-// -------------------------
+// MediatR
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssemblyContaining<RegisterAdvocateCommandHandler>());
 
-var app = builder.Build();
-
+// JWT Settings
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("Jwt"));
 
 var jwt = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
 
-builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+// JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -54,16 +54,23 @@ builder.Services
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-
             ValidIssuer = jwt.Issuer,
             ValidAudience = jwt.Audience,
-
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwt.Key))
         };
     });
 
 builder.Services.AddAuthorization();
+
+// JWT Service
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+// -------------------------
+// Build
+// -------------------------
+
+var app = builder.Build();
 
 // -------------------------
 // Middleware
@@ -78,7 +85,6 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
-
 app.UseAuthorization();
 
 app.UseMiddleware<ExceptionMiddleware>();

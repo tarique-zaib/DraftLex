@@ -1,11 +1,11 @@
-﻿using DraftLex.Application.Features.Auth.Register;
+﻿using DraftLex.Application.Features.Auth;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DraftLex.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/auth")]
 public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -20,6 +20,14 @@ public class AuthController : ControllerBase
     {
         var id = await _mediator.Send(command);
 
-        return CreatedAtAction(nameof(Register), new { id }, new { id });
+        return Ok(new { id });
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(LoginCommand command)
+    {
+        var result = await _mediator.Send(command);
+
+        return Ok(result);
     }
 }
