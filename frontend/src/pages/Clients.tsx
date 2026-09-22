@@ -4,6 +4,7 @@ import { Plus, Search, Phone, User } from "lucide-react";
 import api from "../api/client";
 import Sidebar from "../components/Sidebar";
 import UserMenu from "../components/UserMenu";
+import NewClientModal from "../components/NewClientModal";
 
 interface Client {
   id: string;
@@ -18,6 +19,7 @@ export default function Clients() {
   const [filtered, setFiltered] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showNewClient, setShowNewClient] = useState(false);
 
   useEffect(() => {
     loadClients();
@@ -31,8 +33,8 @@ export default function Clients() {
         (c) =>
           c.fullName.toLowerCase().includes(term) ||
           c.clientCode.toLowerCase().includes(term) ||
-          c.mobile.includes(term)
-      )
+          c.mobile.includes(term),
+      ),
     );
   }, [search, clients]);
 
@@ -63,7 +65,10 @@ export default function Clients() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 font-medium text-white hover:bg-blue-700">
+              <button
+                onClick={() => setShowNewClient(true)}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 font-medium text-white hover:bg-blue-700"
+              >
                 <Plus size={18} />
                 New Client
               </button>
@@ -103,7 +108,10 @@ export default function Clients() {
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-10 text-center text-slate-500">
+                    <td
+                      colSpan={4}
+                      className="py-10 text-center text-slate-500"
+                    >
                       No clients found.
                     </td>
                   </tr>
@@ -150,6 +158,11 @@ export default function Clients() {
                 )}
               </tbody>
             </table>
+            <NewClientModal
+              open={showNewClient}
+              onClose={() => setShowNewClient(false)}
+              onCreated={loadClients}
+            />
           </div>
         </main>
       </div>

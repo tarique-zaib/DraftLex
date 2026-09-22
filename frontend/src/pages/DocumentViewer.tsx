@@ -1,213 +1,156 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Printer, FileText } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { getDocument } from "../api/documents";
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
+import { Save, CheckCircle, ArrowLeft } from "lucide-react";
+import api from "../api/client";
+import Sidebar from "../components/Sidebar";
+import UserMenu from "../components/UserMenu";
+import LegalEditor from "../components/LegalEditor";
+import { marked } from "marked";
+
+interface Document {
+  id: string;
+  title: string;
+  documentType: string;
+  content: string;
+  version: number;
+  status: string;
+}
 
 export default function DocumentViewer() {
   const { id } = useParams();
-  const navigate = useNavigate();
 
-  const [document, setDocument] = useState<any>(null);
+  const [document, setDocument] = useState<Document | null>(null);
+  const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const firstLoad = useRef(true);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        if (!id) return;
-
-        const data = await getDocument(id);
-        setDocument(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
+    loadDocument();
   }, [id]);
+
+  useEffect(() => {
+    if (firstLoad.current) {
+      firstLoad.current = false;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      saveDocument();
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [content]);
+
+  const loadDocument = async () => {
+    try {
+      const { data } = await api.get<Document>(`/Documents/${id}`);
+
+      setDocument(data);
+      setContent(marked.parse(data.content) as string);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveDocument = async () => {
+    if (!document) return;
+
+    try {
+      setSaving(true);
+      setSaved(false);
+
+      await api.put(`/Documents/${document.id}`, {
+        title: document.title,
+        content,
+        status: document.status,
+      });
+
+      setSaved(true);
+
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error("Save failed", err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-        <p className="text-slate-600 text-lg">Loading document...</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-100">
+        Loading document...
       </div>
     );
   }
 
   if (!document) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
-        <p className="text-red-600 text-lg">Document not found.</p>
+      <div className="flex min-h-screen items-center justify-center bg-slate-100">
+        Document not found.
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-200 py-10 px-4">
-      <div className="mx-auto max-w-5xl">
-        {/* Top Actions */}
-        <div className="mb-4 flex items-center justify-between print:hidden">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-slate-700 hover:text-slate-900"
-          >
-            <ArrowLeft size={20} />
-            Back
-          </button>
+    <div className="min-h-screen bg-slate-100">
+      <div className="flex">
+        <Sidebar />
 
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-          >
-            <Printer size={18} />
-            Print
-          </button>
-        </div>
-
-        {/* A4 Document */}
-        <div className="bg-white shadow-2xl rounded-lg border border-slate-300 mx-auto w-full max-w-[850px] min-h-[1120px]">
+        <main className="flex-1 p-8">
           {/* Header */}
-          <div className="border-b border-slate-300 px-12 py-10">
-            <div className="flex items-start justify-between flex-wrap gap-4">
-              <div>
-                <div className="flex items-center gap-3">
-                  <FileText className="text-blue-700" size={32} />
-                  <div>
-                    <h1 className="text-3xl font-bold uppercase tracking-wide text-slate-900">
-                      {document.title}
-                    </h1>
-                    <p className="text-slate-500 mt-1">
-                      DraftLex Legal Workspace
-                    </p>
-                  </div>
-                </div>
-              </div>
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <button
+                onClick={() => window.history.back()}
+                className="mb-3 flex items-center gap-2 text-slate-500 hover:text-slate-700"
+              >
+                <ArrowLeft size={18} />
+                Back
+              </button>
 
-              <div className="text-right text-sm text-slate-600">
-                <p>
-                  <strong>Document Type:</strong> {document.documentType}
-                </p>
-                <p>
-                  <strong>Version:</strong> {document.version}
-                </p>
-                <p>
-                  <strong>Status:</strong> {document.status}
-                </p>
-                <p>
-                  <strong>Updated:</strong>{" "}
-                  {new Date(document.updatedAt).toLocaleDateString("en-IN")}
-                </p>
-              </div>
+              <h1 className="text-3xl font-bold text-slate-900">
+                {document.title}
+              </h1>
+
+              <p className="mt-1 text-slate-500">
+                {document.documentType} • Version {document.version}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {saving ? (
+                <div className="flex items-center gap-2 rounded-lg bg-yellow-100 px-4 py-2 text-yellow-700">
+                  <Save size={18} />
+                  Saving...
+                </div>
+              ) : saved ? (
+                <div className="flex items-center gap-2 rounded-lg bg-green-100 px-4 py-2 text-green-700">
+                  <CheckCircle size={18} />
+                  Saved
+                </div>
+              ) : (
+                <button
+                  onClick={saveDocument}
+                  className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-white hover:bg-blue-700"
+                >
+                  <Save size={18} />
+                  Save
+                </button>
+              )}
+
+              <UserMenu />
             </div>
           </div>
 
-          {/* Document Content */}
-          <div className="px-16 py-14">
-            <div
-              className="
-                prose
-                prose-slate
-                max-w-none
-                prose-headings:text-slate-900
-                prose-h1:text-5xl
-                prose-h1:font-bold
-                prose-h1:text-center
-                prose-h1:uppercase
-                prose-h1:tracking-wide
-                prose-h2:text-2xl
-                prose-h2:font-bold
-                prose-h2:border-b
-                prose-h2:border-slate-300
-                prose-h2:pb-2
-                prose-p:leading-8
-                prose-p:text-slate-800
-                prose-strong:text-slate-900
-                prose-li:leading-8
-              "
-            >
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {document.content}
-              </ReactMarkdown>
-            </div>
-
-            {/* Signature Area */}
-            <div className="mt-16 border-t border-slate-300 pt-8">
-              <div className="flex justify-between items-end">
-                <div>
-                  <p className="font-semibold text-slate-900">
-                    Advocate Signature
-                  </p>
-                  <div className="mt-8 w-56 border-b border-slate-400"></div>
-                  <p className="mt-2 text-sm text-slate-500">
-                    DraftLex Legal Workspace
-                  </p>
-                </div>
-
-                <div className="text-right text-sm text-slate-500">
-                  <p>Generated by DraftLex AI</p>
-                  <p>{new Date(document.updatedAt).toLocaleString("en-IN")}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          {/* Editor */}
+          <LegalEditor content={content} onChange={setContent} />
+        </main>
       </div>
-
-      {/* Print Styles */}
-      <style>{`
-        @media print {
-          body {
-            background: white !important;
-          }
-
-          .print\\:hidden {
-            display: none !important;
-          }
-
-          .shadow-xl {
-            box-shadow: none !important;
-          }
-
-          .rounded-lg {
-            border-radius: 0 !important;
-          }
-
-          .border {
-            border: none !important;
-          }
-
-          .prose h1 {
-            margin-top: 0;
-          }
-        }
-      `}</style>
-      <style>{`
-@media print{
-  body{
-    background:white;
-  }
-
-  .print-hidden{
-    display:none;
-  }
-
-  .shadow-2xl{
-    box-shadow:none;
-  }
-
-  .rounded-lg{
-    border-radius:0;
-  }
-
-  @page{
-    size:A4;
-    margin:20mm;
-  }
-}
-`}</style>
     </div>
   );
 }

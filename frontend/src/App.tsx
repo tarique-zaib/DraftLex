@@ -8,6 +8,7 @@ import Matters from "./pages/Matters";
 import Hearings from "./pages/Hearings";
 import Documents from "./pages/Documents";
 import AIDrafts from "./pages/AIDrafts";
+import ClientDetails from "./pages/ClientDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -70,6 +71,8 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+
+      <Route path="/clients/:id" element={<ClientDetails />} />
 
       <Route
         path="/matters/:id"

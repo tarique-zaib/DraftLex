@@ -4,3 +4,34 @@ body {
   margin: 0;
   font-family: Inter, system-ui, sans-serif;
 }
+/* TipTap Editor */
+
+.ProseMirror {
+  min-height: 700px;
+  outline: none;
+}
+
+.ProseMirror h1 {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.ProseMirror p {
+  line-height: 1.8;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5rem;
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid #2563eb;
+  padding-left: 1rem;
+  color: #475569;
+}

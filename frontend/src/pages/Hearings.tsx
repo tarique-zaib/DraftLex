@@ -3,6 +3,7 @@ import { CalendarDays, Plus, Search, Gavel } from "lucide-react";
 import api from "../api/client";
 import Sidebar from "../components/Sidebar";
 import UserMenu from "../components/UserMenu";
+import NewHearingModal from "../components/NewHearingModal";
 
 interface Hearing {
   id: string;
@@ -21,6 +22,7 @@ export default function Hearings() {
   const [filtered, setFiltered] = useState<Hearing[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showNewHearing, setShowNewHearing] = useState(false);
 
   useEffect(() => {
     loadHearings();
@@ -34,8 +36,8 @@ export default function Hearings() {
         (h) =>
           h.stage.toLowerCase().includes(term) ||
           (h.matter?.title ?? "").toLowerCase().includes(term) ||
-          (h.judgeName ?? "").toLowerCase().includes(term)
-      )
+          (h.judgeName ?? "").toLowerCase().includes(term),
+      ),
     );
   }, [search, hearings]);
 
@@ -66,7 +68,10 @@ export default function Hearings() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 font-medium text-white hover:bg-blue-700">
+              <button
+                onClick={() => setShowNewHearing(true)}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 font-medium text-white hover:bg-blue-700"
+              >
                 <Plus size={18} />
                 New Hearing
               </button>
@@ -128,7 +133,7 @@ export default function Hearings() {
                               day: "2-digit",
                               month: "short",
                               year: "numeric",
-                            }
+                            },
                           )}
                         </div>
 
@@ -151,6 +156,11 @@ export default function Hearings() {
                 </div>
               ))
             )}
+            <NewHearingModal
+              open={showNewHearing}
+              onClose={() => setShowNewHearing(false)}
+              onCreated={loadHearings}
+            />
           </div>
         </main>
       </div>

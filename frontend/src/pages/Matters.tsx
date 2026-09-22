@@ -4,6 +4,7 @@ import { Search, Plus, Scale } from "lucide-react";
 import api from "../api/client";
 import Sidebar from "../components/Sidebar";
 import UserMenu from "../components/UserMenu";
+import NewMatterModal from "../components/NewMatterModal";
 
 interface Matter {
   id: string;
@@ -22,6 +23,7 @@ export default function Matters() {
   const [filtered, setFiltered] = useState<Matter[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showNewMatter, setShowNewMatter] = useState(false);
 
   useEffect(() => {
     loadMatters();
@@ -35,8 +37,8 @@ export default function Matters() {
         (m) =>
           m.title.toLowerCase().includes(term) ||
           m.matterNumber.toLowerCase().includes(term) ||
-          m.court.toLowerCase().includes(term)
-      )
+          m.court.toLowerCase().includes(term),
+      ),
     );
   }, [search, matters]);
 
@@ -80,7 +82,10 @@ export default function Matters() {
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 font-medium text-white hover:bg-blue-700">
+              <button
+                onClick={() => setShowNewMatter(true)}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 font-medium text-white hover:bg-blue-700"
+              >
                 <Plus size={18} />
                 New Matter
               </button>
@@ -153,7 +158,7 @@ export default function Matters() {
 
                     <span
                       className={`rounded-full px-3 py-1 text-sm font-medium ${statusColor(
-                        matter.status
+                        matter.status,
                       )}`}
                     >
                       {matter.status}
@@ -162,6 +167,11 @@ export default function Matters() {
                 </Link>
               ))
             )}
+            <NewMatterModal
+              open={showNewMatter}
+              onClose={() => setShowNewMatter(false)}
+              onCreated={loadMatters}
+            />
           </div>
         </main>
       </div>
