@@ -30,5 +30,7 @@ public class Matter
     public ICollection<TimelineEvent> TimelineEvents { get; set; }
     = new List<TimelineEvent>();
 
+    public ICollection<LegalDocument> Documents { get; set; } = new List<LegalDocument>();
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

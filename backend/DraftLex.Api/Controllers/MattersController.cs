@@ -1,8 +1,10 @@
-﻿using DraftLex.Application.Features.Matters.Create;
+﻿using DraftLex.Application.Features.Documents.DTOs;
+using DraftLex.Application.Features.Matters.Create;
 using DraftLex.Application.Features.Matters.GetById;
+using DraftLex.Application.Features.Timeline.GetByMatter;
+using DraftLex.Application.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using DraftLex.Application.Features.Timeline.GetByMatter;
 
 namespace DraftLex.Api.Controllers;
 
@@ -11,10 +13,12 @@ namespace DraftLex.Api.Controllers;
 public class MattersController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly LegalDocumentService _documentService;
 
-    public MattersController(IMediator mediator)
+    public MattersController(IMediator mediator, LegalDocumentService documentService)
     {
         _mediator = mediator;
+        _documentService = documentService;
     }
 
     [HttpPost]
@@ -42,5 +46,13 @@ public class MattersController : ControllerBase
         var result = await _mediator.Send(new GetTimelineByMatterQuery(id));
 
         return Ok(result);
+    }
+
+    [HttpGet("{matterId:guid}/documents")]
+    public async Task<ActionResult<List<DocumentResponse>>> GetDocuments(Guid matterId)
+    {
+        var documents = await _documentService.GetByMatterAsync(matterId);
+
+        return Ok(documents);
     }
 }

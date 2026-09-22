@@ -1,8 +1,10 @@
 using DraftLex.Api.Middleware;
+using DraftLex.Application.Common.AI;
 using DraftLex.Application.Common.Security;
 using DraftLex.Application.Features.Auth;
 using DraftLex.Application.Interfaces;
 using DraftLex.Application.Services;
+using DraftLex.Infrastructure.AI;
 using DraftLex.Infrastructure.Persistence;
 using DraftLex.Infrastructure.Repositories;
 using DraftLex.Infrastructure.Security;
@@ -32,7 +34,14 @@ builder.Services.AddScoped<IDraftLexDbContext>(sp =>
 
 // Application Services
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
+builder.Services.AddScoped<ILegalDocumentRepository, LegalDocumentRepository>();
 builder.Services.AddScoped<ClientService>();
+builder.Services.AddScoped<LegalDocumentService>();
+
+builder.Services.Configure<OllamaSettings>(
+    builder.Configuration.GetSection("Ollama"));
+
+builder.Services.AddHttpClient<IAILegalDraftService, OllamaLegalDraftService>();
 
 // MediatR
 builder.Services.AddMediatR(cfg =>

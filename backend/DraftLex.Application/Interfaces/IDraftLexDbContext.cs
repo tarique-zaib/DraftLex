@@ -10,6 +10,7 @@ public interface IDraftLexDbContext
     DbSet<Hearing> Hearings { get; }
     DbSet<TimelineEvent> TimelineEvents { get; }
     DbSet<Advocate> Advocates { get; }
+    DbSet<LegalDocument> LegalDocuments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -14,6 +14,8 @@ public class DraftLexDbContext : DbContext, IDraftLexDbContext
     public DbSet<Hearing> Hearings => Set<Hearing>();
     public DbSet<Advocate> Advocates => Set<Advocate>();
     public DbSet<TimelineEvent> TimelineEvents => Set<TimelineEvent>();
+    public DbSet<LegalDocument> LegalDocuments => Set<LegalDocument>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
