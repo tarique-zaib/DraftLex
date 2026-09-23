@@ -7,5 +7,6 @@ public interface IAILegalDraftService
         string clientName,
         string matterTitle,
         string court,
-        string facts);
+        string facts,
+        string advocateName);
 }

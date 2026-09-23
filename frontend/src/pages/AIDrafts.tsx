@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Sparkles, Loader2, BookOpen } from "lucide-react";
 import api from "../api/client";
 import Sidebar from "../components/Sidebar";
@@ -22,6 +22,7 @@ export default function AIDrafts() {
   const [loading, setLoading] = useState(false);
   const [showClauseLibrary, setShowClauseLibrary] = useState(false);
   const [matters, setMatters] = useState<Matter[]>([]);
+  const [searchParams] = useSearchParams();
 
   const [form, setForm] = useState({
     matterId: "",
@@ -33,8 +34,6 @@ export default function AIDrafts() {
   });
 
   useEffect(() => {
-    loadMatters();
-
     const handleShortcut = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "i") {
         e.preventDefault();
@@ -43,8 +42,28 @@ export default function AIDrafts() {
     };
 
     window.addEventListener("keydown", handleShortcut);
+
+    const matterId = searchParams.get("matterId");
+
+    if (matterId) {
+      api
+        .get(`/Matters/${matterId}`)
+        .then(({ data }) => {
+          setForm((prev) => ({
+            ...prev,
+            matterId: data.id,
+            clientName: data.client.fullName,
+            matterTitle: data.title,
+            court: data.court,
+            oppositePartyName: data.oppositePartyName ?? "",
+            oppositePartyAddress: data.oppositePartyAddress ?? "",
+          }));
+        })
+        .catch(console.error);
+    }
+
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, []);
+  }, [searchParams]);
 
   const loadMatters = async () => {
     try {

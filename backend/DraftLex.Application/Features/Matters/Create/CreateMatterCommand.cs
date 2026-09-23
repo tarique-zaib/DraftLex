@@ -8,5 +8,7 @@ public record CreateMatterCommand(
     string MatterType,
     string Court,
     string CaseNumber,
-    string JudgeName
+    string JudgeName,
+    string? OppositePartyName,
+    string? OppositePartyAddress
 ) : IRequest<Guid>;

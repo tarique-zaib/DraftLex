@@ -34,6 +34,11 @@ public class CreateMatterCommandHandler : IRequestHandler<CreateMatterCommand, G
             Court = request.Court,
             CaseNumber = request.CaseNumber,
             JudgeName = request.JudgeName,
+
+            // NEW
+            OppositePartyName = request.OppositePartyName,
+            OppositePartyAddress = request.OppositePartyAddress,
+
             Status = "Active",
             CreatedAt = DateTime.UtcNow
         };

@@ -39,6 +39,7 @@ public class AuthController : ControllerBase
         return Ok(new
         {
             Id = User.FindFirstValue(ClaimTypes.NameIdentifier),
+            Name = User.FindFirstValue(ClaimTypes.Name),
             Email = User.FindFirstValue(ClaimTypes.Email),
             Role = User.FindFirstValue(ClaimTypes.Role)
         });

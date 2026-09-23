@@ -112,7 +112,10 @@ export default function MatterWorkspace() {
               </div>
             </div>
 
-            <button className="rounded-lg bg-white px-5 py-3 font-semibold text-blue-700 hover:bg-slate-100">
+            <button
+              onClick={() => navigate(`/ai-drafts?matterId=${matter.id}`)}
+              className="rounded-lg bg-white px-5 py-3 font-semibold text-blue-700 hover:bg-slate-100 transition"
+            >
               Generate AI Draft
             </button>
           </div>

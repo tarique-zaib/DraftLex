@@ -2,5 +2,9 @@
 
 public interface IJwtTokenService
 {
-    string GenerateToken(Guid advocateId, string email, string role);
+    string GenerateToken(
+        Guid userId,
+        string fullName,
+        string email,
+        string role);
 }

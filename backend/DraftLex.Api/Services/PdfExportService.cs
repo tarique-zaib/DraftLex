@@ -13,9 +13,7 @@ public class PdfExportService
     {
         QuestPDF.Settings.License = LicenseType.Community;
 
-        var originalContent = document.Content ?? string.Empty;
-        var respondent = ExtractRecipient(originalContent);
-        var cleanContent = CleanHtml(originalContent);
+        var cleanContent = CleanHtml(document.Content);
 
         return Document.Create(container =>
         {
@@ -57,50 +55,45 @@ public class PdfExportService
 
                 page.Content().PaddingVertical(20).Column(column =>
                 {
-                    column.Spacing(10);
+                    column.Spacing(12);
 
-                    // ---------- Parties ----------
+                    // ---------- FROM / TO ----------
 
-                    column.Item().Row(row =>
+                    column.Item().Column(party =>
                     {
-                        row.RelativeItem().Column(left =>
-                        {
-                            left.Item()
-                                .Text(document.Matter?.Client?.FullName ?? "Petitioner")
-                                .Bold()
-                                .FontSize(13);
+                        party.Spacing(8);
 
-                            left.Item()
-                                .Text("Petitioner / Plaintiff")
-                                .FontSize(10);
-                        });
-
-                        row.ConstantItem(70)
-                            .AlignMiddle()
-                            .Text("VERSUS")
+                        party.Item()
+                            .Text("FROM")
                             .Bold()
-                            .FontSize(14);
+                            .FontSize(12);
 
-                        row.RelativeItem().AlignRight().Column(right =>
+                        party.Item()
+                            .Text(document.Matter?.Client?.FullName ?? "Client")
+                            .FontSize(12);
+
+                        party.Item().LineHorizontal(0.5f);
+
+                        party.Item()
+                            .Text("TO")
+                            .Bold()
+                            .FontSize(12);
+
+                        party.Item()
+                            .Text(document.Matter?.OppositePartyName ?? "Recipient")
+                            .FontSize(12);
+
+                        if (!string.IsNullOrWhiteSpace(document.Matter?.OppositePartyAddress))
                         {
-                            right.Item()
-                                .AlignRight()
-                                .Text(respondent)
-                                .Bold()
-                                .FontSize(13);
-
-                            right.Item()
-                                .AlignRight()
-                                .Text("Respondent / Defendant")
-                                .FontSize(10);
-                        });
+                            party.Item()
+                                .Text(document.Matter.OppositePartyAddress)
+                                .FontSize(11);
+                        }
                     });
 
                     column.Item().LineHorizontal(1);
 
                     // ---------- Case Details ----------
-
-                    column.Item().PaddingTop(8);
 
                     column.Item().Row(row =>
                     {
@@ -120,7 +113,15 @@ public class PdfExportService
 
                     column.Item().LineHorizontal(0.5f);
 
-                    column.Item().PaddingTop(12);
+                    // ---------- Subject ----------
+
+                    column.Item()
+                        .PaddingTop(8)
+                        .Text($"Subject: {document.Matter?.Title ?? document.Title}")
+                        .Bold()
+                        .FontSize(12);
+
+                    column.Item().PaddingTop(6);
 
                     // ---------- Body ----------
 
@@ -135,21 +136,6 @@ public class PdfExportService
                             .LineHeight(1.6f)
                             .Justify();
                     }
-
-                    // ---------- Signature ----------
-
-                    //column.Item()
-                    //    .EnsureSpace(80)
-                    //    .PaddingTop(25);
-
-                    //column.Item().AlignRight().Column(signature =>
-                    //{
-                    //    signature.Spacing(2);
-
-                    //    signature.Item().Text("_________________");
-                    //    signature.Item().Text("Advocate");
-                    //    signature.Item().Text("Tarique Zaib");
-                    //});
                 });
 
                 // ================= FOOTER =================
@@ -190,83 +176,49 @@ public class PdfExportService
         if (string.IsNullOrWhiteSpace(html))
             return "";
 
-        // Preserve paragraph breaks
         html = html.Replace("</p>", "\n\n", StringComparison.OrdinalIgnoreCase);
         html = html.Replace("<br>", "\n", StringComparison.OrdinalIgnoreCase);
         html = html.Replace("<br/>", "\n", StringComparison.OrdinalIgnoreCase);
         html = html.Replace("<br />", "\n", StringComparison.OrdinalIgnoreCase);
 
-        // Remove HTML tags
         html = Regex.Replace(html, "<[^>]+>", "");
 
-        // Decode entities
         html = WebUtility.HtmlDecode(html);
 
-        // Remove markdown bold
         html = Regex.Replace(html, @"\*\*(.*?)\*\*", "$1");
 
-        // Remove markdown headings
         html = Regex.Replace(html, @"(?m)^#{1,6}\s*", "");
 
-        // Remove inline ##
         html = html.Replace("##", "");
 
-        // Remove first occurrence of LEGAL NOTICE heading
         html = new Regex(
             @"^\s*LEGAL NOTICE\s*$",
             RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Replace(html, "", 1);
 
-        // Remove Date line (already shown in header)
         html = Regex.Replace(
             html,
             @"(?im)^Date:\s*.*$",
             "");
 
-        // Remove To block
         html = Regex.Replace(
             html,
             @"(?is)To:\s*.*?(?=Subject:)",
             "");
 
-        // Remove Subject line
         html = Regex.Replace(
             html,
-            @"(?im)^Subject:\s*$",
+            @"(?im)^Subject:\s*.*$",
             "");
 
-        // Remove duplicate advocate placeholder
         html = Regex.Replace(
             html,
             @"Advocate\s*\[Advocate Name\]\s*\[Bar Council No\.\]",
             "",
             RegexOptions.IgnoreCase);
 
-        // Normalize blank lines
         html = Regex.Replace(html, @"\n{3,}", "\n\n");
 
         return html.Trim();
-    }
-
-    private static string ExtractRecipient(string text)
-    {
-        var match = Regex.Match(
-            text,
-            @"To:\s*(.+)",
-            RegexOptions.IgnoreCase);
-
-        if (!match.Success)
-            return "Respondent";
-
-        var recipient = match.Groups[1].Value.Trim();
-
-        recipient = recipient.Replace("[Recipient Address]", "").Trim();
-
-        if (recipient.Contains("[Recipient Name]", StringComparison.OrdinalIgnoreCase))
-            return "Respondent";
-
-        return string.IsNullOrWhiteSpace(recipient)
-            ? "Respondent"
-            : recipient;
     }
 }

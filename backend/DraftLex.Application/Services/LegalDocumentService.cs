@@ -88,7 +88,7 @@ public class LegalDocumentService
     }
 
     // Generate AI Document
-    public async Task<DocumentResponse> GenerateAsync(GenerateDocumentRequest request)
+    public async Task<DocumentResponse> GenerateAsync(GenerateDocumentRequest request, string advocateName)
     {
         var matter = await _db.Matters
             .Include(m => m.Client)
@@ -102,7 +102,8 @@ public class LegalDocumentService
             matter.Client.FullName,
             matter.Title,
             matter.Court,
-            request.Facts);
+            request.Facts,
+            advocateName);
 
         var document = new LegalDocument
         {

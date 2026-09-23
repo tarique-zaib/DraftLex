@@ -38,6 +38,10 @@ public class GetMatterByIdHandler
             JudgeName = matter.JudgeName,
             Status = matter.Status,
 
+            // NEW
+            OppositePartyName = matter.OppositePartyName,
+            OppositePartyAddress = matter.OppositePartyAddress,
+
             Client = new ClientSummary
             {
                 Id = matter.Client.Id,

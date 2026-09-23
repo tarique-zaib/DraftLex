@@ -33,8 +33,10 @@ public class LoginCommandHandler
         if (!BCrypt.Net.BCrypt.Verify(request.Password, advocate.PasswordHash))
             throw new ArgumentException("Invalid credentials.");
 
+        // FullName is now included in the JWT
         var token = _jwt.GenerateToken(
             advocate.Id,
+            advocate.FullName,
             advocate.Email,
             advocate.Role);
 

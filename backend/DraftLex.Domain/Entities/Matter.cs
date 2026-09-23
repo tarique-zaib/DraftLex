@@ -18,6 +18,9 @@ public class Matter
 
     public string Court { get; set; } = string.Empty;
 
+    public string? OppositePartyName { get; set; }
+    public string? OppositePartyAddress { get; set; }
+
     public string CaseNumber { get; set; } = string.Empty;
 
     public string JudgeName { get; set; } = string.Empty;

@@ -26,7 +26,8 @@ public class OllamaLegalDraftService : IAILegalDraftService
         string clientName,
         string matterTitle,
         string court,
-        string facts)
+        string facts,
+        string advocateName)
     {
         var prompt = $"""
 You are DraftLex AI, an Indian legal drafting assistant.
@@ -87,6 +88,7 @@ State that the client reserves all remedies available under applicable Indian la
 
 Yours faithfully,
 
+{advocateName}
 Advocate
 [Bar Council No.]
 

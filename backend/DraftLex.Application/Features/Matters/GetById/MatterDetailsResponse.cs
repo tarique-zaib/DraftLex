@@ -18,6 +18,11 @@ public class MatterDetailsResponse
 
     public string Status { get; set; } = "";
 
+    // NEW
+    public string? OppositePartyName { get; set; }
+
+    public string? OppositePartyAddress { get; set; }
+
     public ClientSummary Client { get; set; } = new();
 }
 

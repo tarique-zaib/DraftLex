@@ -2,40 +2,47 @@
 using System.Security.Claims;
 using System.Text;
 using DraftLex.Application.Common.Security;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
 namespace DraftLex.Infrastructure.Security;
 
 public class JwtTokenService : IJwtTokenService
 {
-    private readonly JwtSettings _settings;
+    private readonly IConfiguration _configuration;
 
-    public JwtTokenService(IOptions<JwtSettings> options)
+    public JwtTokenService(IConfiguration configuration)
     {
-        _settings = options.Value;
+        _configuration = configuration;
     }
 
-    public string GenerateToken(Guid advocateId, string email, string role)
+    public string GenerateToken(
+        Guid userId,
+        string fullName,
+        string email,
+        string role)
     {
         var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_settings.Key));
+            Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
 
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var credentials = new SigningCredentials(
+            key,
+            SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, advocateId.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+            new Claim(ClaimTypes.Name, fullName),   // <-- Logged-in advocate name
             new Claim(ClaimTypes.Email, email),
             new Claim(ClaimTypes.Role, role)
         };
 
         var token = new JwtSecurityToken(
-            issuer: _settings.Issuer,
-            audience: _settings.Audience,
+            issuer: _configuration["Jwt:Issuer"],
+            audience: _configuration["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(_settings.ExpiryMinutes),
-            signingCredentials: creds);
+            expires: DateTime.UtcNow.AddHours(8),
+            signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }

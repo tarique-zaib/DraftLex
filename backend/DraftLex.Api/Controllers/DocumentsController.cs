@@ -59,7 +59,13 @@ public class DocumentsController : ControllerBase
     public async Task<IActionResult> Generate(
     [FromBody] GenerateDocumentRequest request)
     {
-        var document = await _service.GenerateAsync(request);
+        var advocateName =
+        User.FindFirst("name")?.Value ??
+        User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ??
+        User.Identity?.Name ??
+        "Advocate";
+
+        var document = await _service.GenerateAsync(request, advocateName);
 
         return Ok(new { id = document.Id });
     }
