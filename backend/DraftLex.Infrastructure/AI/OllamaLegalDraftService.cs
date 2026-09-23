@@ -1,21 +1,24 @@
-﻿using System.Net.Http.Json;
-using System.Text.Json;
-using DraftLex.Application.Common.AI;
-using Microsoft.Extensions.Options;
+﻿using DraftLex.Application.Common.AI;
+using DraftLex.Application.Interfaces;
+using Microsoft.Extensions.Configuration;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 
 namespace DraftLex.Infrastructure.AI;
 
 public class OllamaLegalDraftService : IAILegalDraftService
 {
-    private readonly HttpClient _http;
-    private readonly OllamaSettings _settings;
+    private readonly HttpClient _httpClient;
+    private readonly string _modelName;
 
-    public OllamaLegalDraftService(
-        HttpClient http,
-        IOptions<OllamaSettings> options)
+    public OllamaLegalDraftService(HttpClient httpClient, IConfiguration configuration)
     {
-        _http = http;
-        _settings = options.Value;
+        _httpClient = httpClient;
+
+        _httpClient.BaseAddress = new Uri(
+            configuration["Ollama:BaseUrl"] ?? "http://localhost:11434");
+
+        _modelName = configuration["Ollama:Model"] ?? "llama3.1";
     }
 
     public async Task<string> GenerateLegalDraftAsync(
@@ -25,72 +28,101 @@ public class OllamaLegalDraftService : IAILegalDraftService
         string court,
         string facts)
     {
-        var today = DateTime.Now.ToString("dd MMMM yyyy");
         var prompt = $"""
-You are DraftLex AI, an assistant that helps advocates draft legal documents.
+You are DraftLex AI, an Indian legal drafting assistant.
 
-Task:
-Prepare a first-draft {documentType} in a professional Indian legal drafting style.
+Rules:
+- Draft documents suitable for Indian legal practice.
+- Never invent facts.
+- Never accuse anyone of murder, rape, fraud, corruption, or any criminal offence unless those exact allegations appear in the supplied Facts.
+- If information is missing, use neutral placeholders like [Recipient Name] or [Respondent Name].
+- Use formal legal language.
+- Do not use Markdown (#, ##, **).
+- Produce plain text with proper paragraphs.
 
-This is a drafting assistance task for a legal professional.
-Do not refuse the request.
-Do not invent facts.
-Do not invent statutory sections, case law, or legal citations.
-If a legal provision is not provided, use neutral wording such as "under applicable Indian law".
-
-Client Name: {clientName}
+Document Type: {documentType}
+Client: {clientName}
 Matter: {matterTitle}
 Court: {court}
 
 Facts:
 {facts}
 
-Format:
+If the document type is "Legal Notice", use exactly this structure.
 
-# LEGAL NOTICE
+LEGAL NOTICE
 
-**Date:** {today}
+Date: {DateTime.Now:dd MMMM yyyy}
 
-**To:**
+To:
 [Recipient Name]
 [Recipient Address]
 
-**Subject:** {documentType}
+Subject:
+{matterTitle}
 
-## Facts
+Sir/Madam,
 
-Summarize only the provided facts.
+Under the instructions of and on behalf of my client {clientName}, I hereby issue this legal notice.
 
-## Demand
+Facts
 
-State the client's demand clearly and professionally.
+Use only the supplied facts.
 
-## Time for Compliance
+Legal Position
 
-State that the recipient is requested to respond or comply within [15] days.
+Explain the legal position in neutral language.
 
-## Reservation of Rights
+Demand
 
-State that the client reserves the right to pursue remedies available under applicable Indian law.
+State the relief sought based on the supplied facts.
 
-**Advocate**
-[Advocate Name]
+Time for Compliance
+
+Provide 15 days for compliance.
+
+Reservation of Rights
+
+State that the client reserves all remedies available under applicable Indian law.
+
+Yours faithfully,
+
+Advocate
 [Bar Council No.]
+
+Never fabricate criminal allegations.
 """;
 
-        var response = await _http.PostAsJsonAsync(
-            $"{_settings.BaseUrl}/api/generate",
-            new
-            {
-                model = _settings.Model,
-                prompt,
-                stream = false
-            });
+        var request = new OllamaGenerateRequest
+        {
+            Model = _modelName,
+            Prompt = prompt,
+            Stream = false
+        };
 
+        var response = await _httpClient.PostAsJsonAsync("/api/generate", request);
         response.EnsureSuccessStatusCode();
 
-        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var result = await response.Content.ReadFromJsonAsync<OllamaGenerateResponse>();
 
-        return json.RootElement.GetProperty("response").GetString() ?? "";
+        return result?.Response?.Trim() ?? "Unable to generate document.";
+    }
+
+    private class OllamaGenerateRequest
+    {
+        [JsonPropertyName("model")]
+        public string Model { get; set; } = "";
+
+        [JsonPropertyName("prompt")]
+        public string Prompt { get; set; } = "";
+
+        [JsonPropertyName("stream")]
+        public bool Stream { get; set; }
+    }
+
+    private class OllamaGenerateResponse
+    {
+        [JsonPropertyName("response")]
+        public string Response { get; set; } = "";
     }
 }

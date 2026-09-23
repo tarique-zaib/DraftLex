@@ -1,4 +1,5 @@
-﻿using DraftLex.Application.Features.Hearings.Create;
+﻿using DraftLex.Application.DTOs.Hearings;
+using DraftLex.Application.Features.Hearings.Create;
 using DraftLex.Application.Features.Hearings.GetByMatter;
 using DraftLex.Application.Interfaces;
 using MediatR;
@@ -54,5 +55,28 @@ public class HearingsController : ControllerBase
             .ToListAsync(cancellationToken);
 
         return Ok(hearings);
+    }
+
+    [HttpPut("{id:guid}/reschedule")]
+    public async Task<IActionResult> Reschedule(
+    Guid id,
+    [FromBody] RescheduleHearingRequest request,
+    CancellationToken cancellationToken)
+    {
+        var hearing = await _db.Hearings
+            .FirstOrDefaultAsync(h => h.Id == id, cancellationToken);
+
+        if (hearing == null)
+            return NotFound();
+
+        hearing.HearingDate = DateTime.SpecifyKind(
+            request.HearingDate,
+            DateTimeKind.Utc);
+
+        hearing.Remarks = request.Remarks;
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(new { success = true });
     }
 }

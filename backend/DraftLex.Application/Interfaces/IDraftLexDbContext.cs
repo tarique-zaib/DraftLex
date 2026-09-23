@@ -11,6 +11,7 @@ public interface IDraftLexDbContext
     DbSet<TimelineEvent> TimelineEvents { get; }
     DbSet<Advocate> Advocates { get; }
     DbSet<LegalDocument> LegalDocuments { get; }
+    DbSet<LegalClause> LegalClauses { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -64,15 +64,20 @@ public class MattersController : ControllerBase
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var matters = await _db.Matters
+            .Include(m => m.Client)
             .OrderByDescending(m => m.CreatedAt)
             .Select(m => new
             {
-                m.Id,
-                m.MatterNumber,
-                m.Title,
-                m.Status,
-                m.Court,
-                m.CaseNumber
+                id = m.Id,
+                matterNumber = m.MatterNumber,
+                title = m.Title,
+                court = m.Court,
+                status = m.Status,
+                clientId = m.ClientId,
+                client = new
+                {
+                    fullName = m.Client.FullName
+                }
             })
             .ToListAsync(cancellationToken);
 

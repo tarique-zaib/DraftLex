@@ -4,6 +4,7 @@ import api from "../api/client";
 import Sidebar from "../components/Sidebar";
 import UserMenu from "../components/UserMenu";
 import NewHearingModal from "../components/NewHearingModal";
+import RescheduleHearingModal from "../components/RescheduleHearingModal";
 
 interface Hearing {
   id: string;
@@ -35,6 +36,8 @@ export default function Hearings() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [showNewHearing, setShowNewHearing] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [selectedHearing, setSelectedHearing] = useState<Hearing | null>(null);
 
   useEffect(() => {
     loadHearings();
@@ -241,7 +244,13 @@ export default function Hearings() {
                                       {status}
                                     </span>
 
-                                    <button className="rounded-lg border px-3 py-1 text-sm hover:bg-slate-50">
+                                    <button
+                                      onClick={() => {
+                                        setSelectedHearing(hearing);
+                                        setShowReschedule(true);
+                                      }}
+                                      className="rounded-lg border px-3 py-1 text-sm hover:bg-slate-50"
+                                    >
                                       Reschedule
                                     </button>
                                   </div>
@@ -261,6 +270,13 @@ export default function Hearings() {
               open={showNewHearing}
               onClose={() => setShowNewHearing(false)}
               onCreated={loadHearings}
+            />
+            <RescheduleHearingModal
+              open={showReschedule}
+              hearingId={selectedHearing?.id ?? null}
+              currentDate={selectedHearing?.hearingDate ?? ""}
+              onClose={() => setShowReschedule(false)}
+              onUpdated={loadHearings}
             />
           </div>
         </main>

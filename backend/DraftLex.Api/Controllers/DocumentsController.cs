@@ -1,8 +1,11 @@
-﻿using DraftLex.Application.Features.Documents;
+﻿using DraftLex.Api.Services;
+using DraftLex.Application.Features.Documents;
 using DraftLex.Application.Features.Documents.DTOs;
+using DraftLex.Application.Interfaces;
 using DraftLex.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace DraftLex.Api.Controllers;
 
@@ -12,10 +15,14 @@ namespace DraftLex.Api.Controllers;
 public class DocumentsController : ControllerBase
 {
     private readonly LegalDocumentService _service;
+    private readonly PdfExportService _pdf;
+    private readonly IDraftLexDbContext _db;
 
-    public DocumentsController(LegalDocumentService service)
+    public DocumentsController(LegalDocumentService service, PdfExportService pdf, IDraftLexDbContext db)
     {
         _service = service;
+        _pdf = pdf;
+        _db = db;
     }
 
     [HttpPost]
@@ -69,5 +76,24 @@ public class DocumentsController : ControllerBase
     {
         var documents = await _service.GetAllAsync();
         return Ok(documents);
+    }
+
+    [HttpGet("{id:guid}/pdf")]
+    public async Task<IActionResult> ExportPdf(Guid id)
+    {
+        var document = await _db.LegalDocuments
+            .Include(d => d.Matter)
+            .ThenInclude(m => m.Client)
+            .FirstOrDefaultAsync(d => d.Id == id);
+
+        if (document == null)
+            return NotFound();
+
+        var pdf = _pdf.Generate(document);
+
+        return File(
+            pdf,
+            "application/pdf",
+            $"{document.Title}.pdf");
     }
 }

@@ -143,6 +143,19 @@ export default function DocumentViewer() {
                 </button>
               )}
 
+              <button
+                onClick={() => {
+                  const apiBase =
+                    api.defaults.baseURL?.replace(/\/$/, "") ||
+                    `${window.location.origin}/api`;
+
+                  window.open(`${apiBase}/Documents/${id}/pdf`, "_blank");
+                }}
+                className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+              >
+                Export PDF
+              </button>
+
               <UserMenu />
             </div>
           </div>

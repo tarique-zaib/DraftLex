@@ -1,4 +1,5 @@
 using DraftLex.Api.Middleware;
+using DraftLex.Api.Services;
 using DraftLex.Application.Common.AI;
 using DraftLex.Application.Common.Security;
 using DraftLex.Application.Features.Auth;
@@ -71,6 +72,7 @@ builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<ILegalDocumentRepository, LegalDocumentRepository>();
 builder.Services.AddScoped<ClientService>();
 builder.Services.AddScoped<LegalDocumentService>();
+builder.Services.AddScoped<PdfExportService>();
 
 builder.Services.Configure<OllamaSettings>(
     builder.Configuration.GetSection("Ollama"));

@@ -1,16 +1,30 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, BookOpen } from "lucide-react";
 import api from "../api/client";
 import Sidebar from "../components/Sidebar";
 import UserMenu from "../components/UserMenu";
+import ClauseLibraryModal from "../components/ClauseLibraryModal";
+
+interface Matter {
+  id: string;
+  matterNumber: string;
+  title: string;
+  court: string;
+  client?: {
+    fullName: string;
+  };
+}
 
 export default function AIDrafts() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
+  const [showClauseLibrary, setShowClauseLibrary] = useState(false);
+  const [matters, setMatters] = useState<Matter[]>([]);
 
   const [form, setForm] = useState({
+    matterId: "",
     documentType: "Legal Notice",
     clientName: "",
     matterTitle: "",
@@ -18,11 +32,57 @@ export default function AIDrafts() {
     facts: "",
   });
 
+  useEffect(() => {
+    loadMatters();
+
+    const handleShortcut = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        setShowClauseLibrary(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
+
+  const loadMatters = async () => {
+    try {
+      const { data } = await api.get("/Matters");
+      setMatters(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const selectMatter = (id: string) => {
+    const matter = matters.find((m) => m.id === id);
+
+    setForm((prev) => ({
+      ...prev,
+      matterId: id,
+      clientName: matter?.client?.fullName ?? "",
+      matterTitle: matter?.title ?? "",
+      court: matter?.court ?? "",
+    }));
+  };
+
   const generateDraft = async () => {
+    if (!form.matterId) {
+      alert("Please select a Matter.");
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const { data } = await api.post("/Documents/generate", form);
+      const payload = {
+        matterId: form.matterId,
+        documentType: form.documentType,
+        facts: form.facts,
+      };
+
+      const { data } = await api.post("/Documents/generate", payload);
 
       if (data?.id) {
         navigate(`/documents/${data.id}`);
@@ -35,6 +95,13 @@ export default function AIDrafts() {
     }
   };
 
+  const insertClause = (content: string) => {
+    setForm((prev) => ({
+      ...prev,
+      facts: prev.facts ? `${prev.facts}\n\n${content}` : content,
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="flex">
@@ -45,7 +112,7 @@ export default function AIDrafts() {
             <div>
               <h1 className="text-3xl font-bold text-slate-900">AI Drafts</h1>
               <p className="text-slate-500">
-                Generate legal drafts using DraftLex AI.
+                Generate professional legal drafts using DraftLex AI.
               </p>
             </div>
 
@@ -54,6 +121,27 @@ export default function AIDrafts() {
 
           <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <div className="grid gap-5 md:grid-cols-2">
+              {/* Matter Dropdown */}
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium">
+                  Select Matter *
+                </label>
+
+                <select
+                  value={form.matterId}
+                  onChange={(e) => selectMatter(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 p-3"
+                >
+                  <option value="">Select a Matter</option>
+
+                  {matters.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.matterNumber} • {m.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="mb-2 block text-sm font-medium">
                   Document Type
@@ -81,10 +169,8 @@ export default function AIDrafts() {
 
                 <input
                   value={form.clientName}
-                  onChange={(e) =>
-                    setForm({ ...form, clientName: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-300 p-3"
+                  readOnly
+                  className="w-full rounded-lg border border-slate-300 bg-slate-100 p-3"
                 />
               </div>
 
@@ -95,10 +181,8 @@ export default function AIDrafts() {
 
                 <input
                   value={form.matterTitle}
-                  onChange={(e) =>
-                    setForm({ ...form, matterTitle: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-300 p-3"
+                  readOnly
+                  className="w-full rounded-lg border border-slate-300 bg-slate-100 p-3"
                 />
               </div>
 
@@ -107,32 +191,36 @@ export default function AIDrafts() {
 
                 <input
                   value={form.court}
-                  onChange={(e) =>
-                    setForm({ ...form, court: e.target.value })
-                  }
-                  className="w-full rounded-lg border border-slate-300 p-3"
+                  readOnly
+                  className="w-full rounded-lg border border-slate-300 bg-slate-100 p-3"
                 />
               </div>
             </div>
 
-            <div className="mt-5">
-              <label className="mb-2 block text-sm font-medium">
-                Facts of the Case
-              </label>
+            <div className="mt-6 flex items-center justify-between">
+              <label className="text-sm font-medium">Facts of the Case</label>
 
-              <textarea
-                rows={8}
-                value={form.facts}
-                onChange={(e) =>
-                  setForm({ ...form, facts: e.target.value })
-                }
-                placeholder="Describe the facts..."
-                className="w-full rounded-lg border border-slate-300 p-4"
-              />
+              <button
+                type="button"
+                onClick={() => setShowClauseLibrary(true)}
+                className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-slate-50"
+              >
+                <BookOpen size={18} />
+                Clause Library
+              </button>
             </div>
+
+            <textarea
+              rows={10}
+              value={form.facts}
+              onChange={(e) => setForm({ ...form, facts: e.target.value })}
+              placeholder="Describe the facts or insert ready-made clauses..."
+              className="mt-2 w-full rounded-lg border border-slate-300 p-4"
+            />
 
             <div className="mt-8 flex justify-end">
               <button
+                type="button"
                 onClick={generateDraft}
                 disabled={loading}
                 className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
@@ -149,6 +237,12 @@ export default function AIDrafts() {
           </div>
         </main>
       </div>
+
+      <ClauseLibraryModal
+        open={showClauseLibrary}
+        onClose={() => setShowClauseLibrary(false)}
+        onInsert={insertClause}
+      />
     </div>
   );
 }

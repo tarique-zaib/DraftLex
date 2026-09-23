@@ -91,48 +91,45 @@ public class LegalDocumentService
     public async Task<DocumentResponse> GenerateAsync(GenerateDocumentRequest request)
     {
         var matter = await _db.Matters
-            .Where(m => m.Title == request.MatterTitle)
-            .FirstOrDefaultAsync();
+            .Include(m => m.Client)
+            .FirstOrDefaultAsync(m => m.Id == request.MatterId);
 
-        var clientName = request.ClientName;
-        var matterTitle = request.MatterTitle;
-        var court = request.Court;
+        if (matter == null)
+            throw new Exception("Matter not found.");
 
-        if (matter != null)
-        {
-            var client = await _db.Clients.FindAsync(matter.ClientId);
-
-            if (client != null)
-                clientName = client.FullName;
-
-            matterTitle = matter.Title;
-            court = matter.Court;
-        }
-
-        var content = await _ai.GenerateLegalDraftAsync(
+        var generatedContent = await _ai.GenerateLegalDraftAsync(
             request.DocumentType,
-            clientName,
-            matterTitle,
-            court,
+            matter.Client.FullName,
+            matter.Title,
+            matter.Court,
             request.Facts);
 
         var document = new LegalDocument
         {
             Id = Guid.NewGuid(),
-            MatterId = matter?.Id ?? Guid.Empty,
-            Title = $"{request.DocumentType.ToUpper()} - {clientName.ToUpper()}",
+            MatterId = matter.Id,
+            Title = $"{request.DocumentType} - {matter.Client.FullName}",
             DocumentType = request.DocumentType,
-            Content = content,
-            Version = 1,
+            Content = generatedContent,
             Status = "Draft",
+            Version = 1,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _repo.AddAsync(document);
-        await _repo.SaveChangesAsync();
+        _db.LegalDocuments.Add(document);
+        await _db.SaveChangesAsync();
 
-        return Map(document);
+        return new DocumentResponse
+        {
+            Id = document.Id,
+            MatterId = document.MatterId,
+            Title = document.Title,
+            DocumentType = document.DocumentType,
+            Content = document.Content,
+            Status = document.Status,
+            Version = document.Version
+        };
     }
 
     // Get All Documents
