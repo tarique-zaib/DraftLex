@@ -78,6 +78,7 @@ builder.Services.Configure<OllamaSettings>(
     builder.Configuration.GetSection("Ollama"));
 
 builder.Services.AddHttpClient<IAILegalDraftService, OllamaLegalDraftService>();
+builder.Services.AddHttpClient<ICopilotService, MatterCopilotService>();
 
 // MediatR
 builder.Services.AddMediatR(cfg =>

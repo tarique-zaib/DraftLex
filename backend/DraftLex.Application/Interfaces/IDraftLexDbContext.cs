@@ -12,6 +12,7 @@ public interface IDraftLexDbContext
     DbSet<Advocate> Advocates { get; }
     DbSet<LegalDocument> LegalDocuments { get; }
     DbSet<LegalClause> LegalClauses { get; }
+    DbSet<CopilotMessage> CopilotMessages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

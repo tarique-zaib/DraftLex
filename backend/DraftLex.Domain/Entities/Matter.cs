@@ -34,6 +34,8 @@ public class Matter
     = new List<TimelineEvent>();
 
     public ICollection<LegalDocument> Documents { get; set; } = new List<LegalDocument>();
+    public ICollection<CopilotMessage> CopilotMessages { get; set; }
+        = new List<CopilotMessage>();
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

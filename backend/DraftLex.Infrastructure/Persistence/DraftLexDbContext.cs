@@ -16,11 +16,29 @@ public class DraftLexDbContext : DbContext, IDraftLexDbContext
     public DbSet<TimelineEvent> TimelineEvents => Set<TimelineEvent>();
     public DbSet<LegalDocument> LegalDocuments => Set<LegalDocument>();
     public DbSet<LegalClause> LegalClauses => Set<LegalClause>();
+    public DbSet<CopilotMessage> CopilotMessages => Set<CopilotMessage>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(DraftLexDbContext).Assembly);
+
+        modelBuilder.Entity<CopilotMessage>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Role)
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entity.Property(x => x.Content)
+                .IsRequired();
+
+            entity.HasOne(x => x.Matter)
+                .WithMany(x => x.CopilotMessages)
+                .HasForeignKey(x => x.MatterId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
         modelBuilder.Entity<LegalClause>().HasData(
 
