@@ -121,4 +121,22 @@ public class ClientService
             })
             .ToListAsync();
     }
+
+    public async Task<List<ClientHearingResponse>> GetHearingsAsync(Guid clientId)
+    {
+        return await _db.Hearings
+            .Where(h => h.Matter.ClientId == clientId)
+            .OrderBy(h => h.HearingDate)
+            .Select(h => new ClientHearingResponse
+            {
+                Id = h.Id,
+                MatterId = h.MatterId,
+                MatterTitle = h.Matter.Title,
+                HearingDate = h.HearingDate,
+                Stage = h.Stage,
+                JudgeName = h.JudgeName,
+                CourtRoom = h.CourtRoom
+            })
+            .ToListAsync();
+    }
 }

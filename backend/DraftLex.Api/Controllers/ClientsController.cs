@@ -1,4 +1,5 @@
 ﻿using DraftLex.Application.DTOs.Clients;
+using DraftLex.Application.Interfaces;
 using DraftLex.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -66,5 +67,12 @@ public class ClientsController : ControllerBase
     {
         var matters = await _service.GetMattersAsync(id);
         return Ok(matters);
+    }
+
+    [HttpGet("{id:guid}/hearings")]
+    public async Task<IActionResult> GetHearings(Guid id)
+    {
+        var hearings = await _service.GetHearingsAsync(id);
+        return Ok(hearings);
     }
 }

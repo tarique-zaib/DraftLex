@@ -34,6 +34,36 @@ export default function ClientDetails() {
   const [showEdit, setShowEdit] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [matters, setMatters] = useState<any[]>([]);
+
+  interface ClientHearing {
+    id: string;
+    matterId: string;
+    matterTitle: string;
+    hearingDate: string;
+    stage: string;
+    judgeName: string;
+    courtRoom: string;
+  }
+
+  const [hearings, setHearings] = useState<ClientHearing[]>([]);
+  const [loadingHearings, setLoadingHearings] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== "hearings" || !id) return;
+
+    const loadHearings = async () => {
+      try {
+        setLoadingHearings(true);
+        const { data } = await api.get(`/Clients/${id}/hearings`);
+        setHearings(data);
+      } finally {
+        setLoadingHearings(false);
+      }
+    };
+
+    loadHearings();
+  }, [activeTab, id]);
+
   useEffect(() => {
     if (activeTab !== "matters") return;
 
@@ -272,10 +302,80 @@ export default function ClientDetails() {
           {/* Hearings */}
           {activeTab === "hearings" && (
             <div className="rounded-xl border bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-xl font-semibold">Hearings</h2>
-              <p className="text-slate-500">
-                Upcoming and past hearings will appear here.
-              </p>
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Client Hearings</h2>
+
+                <Link
+                  to="/hearings"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-white"
+                >
+                  + Schedule Hearing
+                </Link>
+              </div>
+
+              {loadingHearings ? (
+                <div className="py-8 text-center text-slate-500">
+                  Loading hearings...
+                </div>
+              ) : hearings.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-8 text-center text-slate-500">
+                  No hearings found.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {hearings.map((h) => {
+                    const date = new Date(h.hearingDate);
+
+                    const today = new Date();
+
+                    const isToday =
+                      date.toDateString() === today.toDateString();
+
+                    const isPast = date < today && !isToday;
+
+                    return (
+                      <div
+                        key={h.id}
+                        className="flex items-center justify-between rounded-lg border p-4 hover:bg-slate-50"
+                      >
+                        <div>
+                          <p className="font-semibold">{h.matterTitle}</p>
+
+                          <p className="text-sm text-slate-500">{h.stage}</p>
+
+                          <p className="text-sm text-slate-500">
+                            {date.toLocaleDateString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </p>
+
+                          <p className="text-xs text-slate-400">
+                            {h.judgeName} • {h.courtRoom}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`rounded-full px-3 py-1 text-sm ${
+                            isToday
+                              ? "bg-red-100 text-red-700"
+                              : isPast
+                                ? "bg-gray-200 text-gray-700"
+                                : "bg-blue-100 text-blue-700"
+                          }`}
+                        >
+                          {isToday
+                            ? "Today"
+                            : isPast
+                              ? "Completed"
+                              : "Upcoming"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
