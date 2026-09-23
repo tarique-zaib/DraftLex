@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Users, Scale, CalendarDays, FileText } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import UserMenu from "../components/UserMenu";
 import Sidebar from "../components/Sidebar";
 import "../index.css";
+import { useAuth } from "../context/AuthContext";
 
 function StatCard({
   title,
@@ -31,6 +32,13 @@ function StatCard({
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const displayName = user?.email
+    ? user.email.split("@")[0].replace(/^./, (c) => c.toUpperCase())
+    : "Advocate";
+
   const [stats, setStats] = useState({
     clients: 0,
     matters: 0,
@@ -44,11 +52,13 @@ export default function Dashboard() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const [clientsRes, mattersRes, hearingsRes] = await Promise.all([
-          api.get("/Clients"),
-          api.get("/Matters"),
-          api.get("/Hearings"),
-        ]);
+        const [clientsRes, mattersRes, hearingsRes, documentsRes] =
+          await Promise.all([
+            api.get("/Clients"),
+            api.get("/Matters"),
+            api.get("/Hearings"),
+            api.get("/Documents"),
+          ]);
 
         setMatters(mattersRes.data.slice(0, 5));
         setHearings(hearingsRes.data.slice(0, 5));
@@ -57,7 +67,7 @@ export default function Dashboard() {
           clients: clientsRes.data.length,
           matters: mattersRes.data.length,
           hearings: hearingsRes.data.length,
-          documents: 0,
+          documents: documentsRes.data.length,
         });
       } catch (err) {
         console.error("Dashboard load failed", err);
@@ -70,24 +80,25 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="flex">
-        {/* Sidebar */}
         <Sidebar />
 
-        {/* Main Content */}
         <main className="flex-1 p-8">
-          {/* Header */}
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">
-                Welcome, Advocate
+                Welcome, Advocate {displayName}
               </h1>
+
               <p className="text-slate-500">
                 Manage clients, matters and AI legal drafts.
               </p>
             </div>
 
             <div className="flex items-center gap-3">
-              <button className="rounded-lg bg-blue-600 px-5 py-3 font-medium text-white transition hover:bg-blue-700">
+              <button
+                onClick={() => navigate("/ai-drafts")}
+                className="rounded-lg bg-blue-600 px-5 py-3 font-medium text-white transition hover:bg-blue-700"
+              >
                 + Generate AI Draft
               </button>
 
@@ -95,7 +106,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Stats */}
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             <StatCard
               title="Clients"
@@ -122,9 +132,7 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Recent Matters & Hearings */}
           <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            {/* Recent Matters */}
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-xl font-semibold">Recent Matters</h2>
 
@@ -159,7 +167,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Upcoming Hearings */}
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="mb-4 text-xl font-semibold">Upcoming Hearings</h2>
 

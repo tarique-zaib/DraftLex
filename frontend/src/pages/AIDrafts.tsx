@@ -18,11 +18,11 @@ interface Matter {
 
 export default function AIDrafts() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(false);
   const [showClauseLibrary, setShowClauseLibrary] = useState(false);
   const [matters, setMatters] = useState<Matter[]>([]);
-  const [searchParams] = useSearchParams();
 
   const [form, setForm] = useState({
     matterId: "",
@@ -43,36 +43,37 @@ export default function AIDrafts() {
 
     window.addEventListener("keydown", handleShortcut);
 
-    const matterId = searchParams.get("matterId");
+    const initialize = async () => {
+      try {
+        // Load all matters first (needed for dropdown)
+        const { data: mattersData } = await api.get("/Matters");
+        setMatters(mattersData);
 
-    if (matterId) {
-      api
-        .get(`/Matters/${matterId}`)
-        .then(({ data }) => {
-          setForm((prev) => ({
-            ...prev,
-            matterId: data.id,
-            clientName: data.client.fullName,
-            matterTitle: data.title,
-            court: data.court,
-            oppositePartyName: data.oppositePartyName ?? "",
-            oppositePartyAddress: data.oppositePartyAddress ?? "",
-          }));
-        })
-        .catch(console.error);
-    }
+        // Check if user came from Matter Workspace
+        const matterId = searchParams.get("matterId");
+
+        if (matterId) {
+          const matter = mattersData.find((m: Matter) => m.id === matterId);
+
+          if (matter) {
+            setForm((prev) => ({
+              ...prev,
+              matterId: matter.id,
+              clientName: matter.client?.fullName ?? "",
+              matterTitle: matter.title,
+              court: matter.court,
+            }));
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    initialize();
 
     return () => window.removeEventListener("keydown", handleShortcut);
   }, [searchParams]);
-
-  const loadMatters = async () => {
-    try {
-      const { data } = await api.get("/Matters");
-      setMatters(data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const selectMatter = (id: string) => {
     const matter = matters.find((m) => m.id === id);
@@ -129,7 +130,10 @@ export default function AIDrafts() {
         <main className="flex-1 p-8">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">AI Drafts</h1>
+              <h1 className="text-3xl font-bold text-slate-900">
+                AI Drafts
+              </h1>
+
               <p className="text-slate-500">
                 Generate professional legal drafts using DraftLex AI.
               </p>
@@ -153,14 +157,15 @@ export default function AIDrafts() {
                 >
                   <option value="">Select a Matter</option>
 
-                  {matters.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.matterNumber} • {m.title}
+                  {matters.map((matter) => (
+                    <option key={matter.id} value={matter.id}>
+                      {matter.matterNumber} • {matter.title}
                     </option>
                   ))}
                 </select>
               </div>
 
+              {/* Document Type */}
               <div>
                 <label className="mb-2 block text-sm font-medium">
                   Document Type
@@ -169,7 +174,10 @@ export default function AIDrafts() {
                 <select
                   value={form.documentType}
                   onChange={(e) =>
-                    setForm({ ...form, documentType: e.target.value })
+                    setForm({
+                      ...form,
+                      documentType: e.target.value,
+                    })
                   }
                   className="w-full rounded-lg border border-slate-300 p-3"
                 >
@@ -181,6 +189,7 @@ export default function AIDrafts() {
                 </select>
               </div>
 
+              {/* Client */}
               <div>
                 <label className="mb-2 block text-sm font-medium">
                   Client Name
@@ -193,6 +202,7 @@ export default function AIDrafts() {
                 />
               </div>
 
+              {/* Matter Title */}
               <div>
                 <label className="mb-2 block text-sm font-medium">
                   Matter Title
@@ -205,8 +215,11 @@ export default function AIDrafts() {
                 />
               </div>
 
+              {/* Court */}
               <div>
-                <label className="mb-2 block text-sm font-medium">Court</label>
+                <label className="mb-2 block text-sm font-medium">
+                  Court
+                </label>
 
                 <input
                   value={form.court}
@@ -216,13 +229,17 @@ export default function AIDrafts() {
               </div>
             </div>
 
+            {/* Facts */}
             <div className="mt-6 flex items-center justify-between">
-              <label className="text-sm font-medium">Facts of the Case</label>
+              <label className="text-sm font-medium">
+                Facts of the Case
+              </label>
 
               <button
                 type="button"
                 onClick={() => setShowClauseLibrary(true)}
                 className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-slate-50"
+                title="Ctrl + Shift + I"
               >
                 <BookOpen size={18} />
                 Clause Library
@@ -232,11 +249,17 @@ export default function AIDrafts() {
             <textarea
               rows={10}
               value={form.facts}
-              onChange={(e) => setForm({ ...form, facts: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  facts: e.target.value,
+                })
+              }
               placeholder="Describe the facts or insert ready-made clauses..."
               className="mt-2 w-full rounded-lg border border-slate-300 p-4"
             />
 
+            {/* Generate Button */}
             <div className="mt-8 flex justify-end">
               <button
                 type="button"

@@ -21,13 +21,13 @@ export default function UserMenu() {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2 shadow-sm hover:bg-slate-50"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-white">
-          <User size={18} />
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 text-lg font-semibold text-white">
+          {user.email.split("@")[0].charAt(0).toUpperCase()}
         </div>
 
         <div className="hidden text-left md:block">
           <div className="text-sm font-semibold text-slate-900">
-            {user.email.split("@")[0]}
+            {user.email.split("@")[0].replace(/^./, (c) => c.toUpperCase())}
           </div>
           <div className="text-xs text-slate-500">{user.role}</div>
         </div>
@@ -39,7 +39,9 @@ export default function UserMenu() {
         <div className="absolute right-0 z-50 mt-2 w-64 rounded-2xl border border-slate-200 bg-white shadow-xl">
           <div className="border-b border-slate-100 p-4">
             <div className="font-semibold text-slate-900">
-              {user.email.split("@")[0]}
+              <div className="font-semibold text-slate-900">
+                {user.email.split("@")[0].replace(/^./, (c) => c.toUpperCase())}
+              </div>
             </div>
             <div className="text-sm text-slate-500">{user.email}</div>
             <div className="mt-2 inline-block rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">

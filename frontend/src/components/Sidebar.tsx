@@ -59,12 +59,12 @@ export default function Sidebar() {
       </nav>
 
       <div className="border-t border-slate-800 p-4">
-        <div className="mb-4">
+        {/* <div className="mb-4">
           <p className="text-sm font-semibold">
             {user?.email.split("@")[0]}
           </p>
           <p className="text-xs text-slate-400">{user?.role}</p>
-        </div>
+        </div> */}
 
         <button
           onClick={handleLogout}
