@@ -17,6 +17,18 @@ interface Hearing {
   };
 }
 
+const getHearingStatus = (hearingDate: string) => {
+  const hearing = new Date(hearingDate);
+  const today = new Date();
+
+  hearing.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+
+  if (hearing.getTime() === today.getTime()) return "Today";
+  if (hearing > today) return "Upcoming";
+  return "Completed";
+};
+
 export default function Hearings() {
   const [hearings, setHearings] = useState<Hearing[]>([]);
   const [filtered, setFiltered] = useState<Hearing[]>([]);
@@ -53,6 +65,40 @@ export default function Hearings() {
     }
   };
 
+  const todayCount = hearings.filter(
+    (h) => getHearingStatus(h.hearingDate) === "Today",
+  ).length;
+
+  const upcomingCount = hearings.filter(
+    (h) => getHearingStatus(h.hearingDate) === "Upcoming",
+  ).length;
+
+  const completedCount = hearings.filter(
+    (h) => getHearingStatus(h.hearingDate) === "Completed",
+  ).length;
+
+  const groupedHearings = filtered.reduce(
+    (acc, hearing) => {
+      const status = getHearingStatus(hearing.hearingDate);
+
+      const court = hearing.courtRoom || "Court Not Assigned";
+
+      if (!acc[status]) acc[status] = {};
+
+      if (!acc[status][court]) acc[status][court] = [];
+
+      acc[status][court].push(hearing);
+
+      acc[status][court].sort(
+        (a, b) =>
+          new Date(a.hearingDate).getTime() - new Date(b.hearingDate).getTime(),
+      );
+
+      return acc;
+    },
+    {} as Record<string, Record<string, Hearing[]>>,
+  );
+
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="flex">
@@ -79,7 +125,28 @@ export default function Hearings() {
               <UserMenu />
             </div>
           </div>
+          <div className="mb-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+              <p className="text-sm text-red-700">Today's Hearings</p>
+              <h2 className="mt-1 text-3xl font-bold text-red-700">
+                {todayCount}
+              </h2>
+            </div>
 
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+              <p className="text-sm text-blue-700">Upcoming</p>
+              <h2 className="mt-1 text-3xl font-bold text-blue-700">
+                {upcomingCount}
+              </h2>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-100 p-5">
+              <p className="text-sm text-slate-700">Completed</p>
+              <h2 className="mt-1 text-3xl font-bold text-slate-700">
+                {completedCount}
+              </h2>
+            </div>
+          </div>
           <div className="mb-6 flex items-center gap-3 rounded-xl bg-white p-4 shadow-sm">
             <Search className="text-slate-400" size={20} />
 
@@ -91,7 +158,7 @@ export default function Hearings() {
             />
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-8">
             {loading ? (
               <div className="rounded-xl bg-white p-10 text-center">
                 Loading hearings...
@@ -101,61 +168,95 @@ export default function Hearings() {
                 No hearings found.
               </div>
             ) : (
-              filtered.map((hearing) => (
-                <div
-                  key={hearing.id}
-                  className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-blue-100 p-3 text-blue-700">
-                          <Gavel size={22} />
+              ["Today", "Upcoming", "Completed"].map((section) => {
+                const courts = groupedHearings[section];
+
+                if (!courts) return null;
+
+                return (
+                  <div key={section}>
+                    <h2 className="mb-4 text-2xl font-bold text-slate-900">
+                      {section === "Today"
+                        ? "Today's Cause List"
+                        : `${section} Hearings`}
+                    </h2>
+
+                    <div className="space-y-6">
+                      {Object.entries(courts).map(([court, items]) => (
+                        <div
+                          key={court}
+                          className="rounded-xl border bg-white shadow-sm"
+                        >
+                          <div className="border-b bg-slate-50 px-5 py-3">
+                            <h3 className="font-semibold">{court}</h3>
+                          </div>
+
+                          <div className="divide-y">
+                            {items.map((hearing) => {
+                              const status = getHearingStatus(
+                                hearing.hearingDate,
+                              );
+
+                              return (
+                                <div
+                                  key={hearing.id}
+                                  className="flex items-center justify-between px-5 py-4 hover:bg-slate-50"
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <div className="rounded-lg bg-blue-100 p-3 text-blue-700">
+                                      <Gavel size={20} />
+                                    </div>
+
+                                    <div>
+                                      <p className="font-semibold">
+                                        {hearing.matter?.title ||
+                                          "Unknown Matter"}
+                                      </p>
+
+                                      <p className="text-sm text-slate-500">
+                                        {hearing.stage}
+                                      </p>
+
+                                      <p className="text-sm text-slate-500">
+                                        {new Date(
+                                          hearing.hearingDate,
+                                        ).toLocaleTimeString("en-IN", {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-3">
+                                    <span
+                                      className={`rounded-full px-3 py-1 text-sm ${
+                                        status === "Today"
+                                          ? "bg-red-100 text-red-700"
+                                          : status === "Upcoming"
+                                            ? "bg-blue-100 text-blue-700"
+                                            : "bg-slate-200 text-slate-700"
+                                      }`}
+                                    >
+                                      {status}
+                                    </span>
+
+                                    <button className="rounded-lg border px-3 py-1 text-sm hover:bg-slate-50">
+                                      Reschedule
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-
-                        <div>
-                          <h3 className="text-lg font-semibold text-slate-900">
-                            {hearing.stage}
-                          </h3>
-
-                          <p className="text-sm text-slate-500">
-                            {hearing.matter?.title || "Unknown Matter"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid gap-3 text-sm text-slate-600 md:grid-cols-3">
-                        <div>
-                          <span className="font-medium">Date:</span>{" "}
-                          {new Date(hearing.hearingDate).toLocaleDateString(
-                            "en-IN",
-                            {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            },
-                          )}
-                        </div>
-
-                        <div>
-                          <span className="font-medium">Judge:</span>{" "}
-                          {hearing.judgeName || "TBD"}
-                        </div>
-
-                        <div>
-                          <span className="font-medium">Court Room:</span>{" "}
-                          {hearing.courtRoom || "TBD"}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
-                      Upcoming
+                      ))}
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
+
             <NewHearingModal
               open={showNewHearing}
               onClose={() => setShowNewHearing(false)}
