@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -6,73 +6,88 @@ import {
   CalendarDays,
   FileText,
   Sparkles,
-  LogOut,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import i18n from "../i18n";
+import { useEffect, useState } from "react";
 
-const menu = [
-  { label: "Dashboard", icon: LayoutDashboard, to: "/" },
-  { label: "Clients", icon: Users, to: "/clients" },
-  { label: "Matters", icon: Scale, to: "/matters" },
-  { label: "Hearings", icon: CalendarDays, to: "/hearings" },
-  { label: "Documents", icon: FileText, to: "/documents" },
-  { label: "AI Drafts", icon: Sparkles, to: "/ai-drafts" },
+const menuItems = [
+  { to: "/", icon: LayoutDashboard, key: "dashboard" },
+  { to: "/clients", icon: Users, key: "clients" },
+  { to: "/matters", icon: Scale, key: "matters" },
+  { to: "/hearings", icon: CalendarDays, key: "hearings" },
+  { to: "/documents", icon: FileText, key: "documents" },
+  { to: "/ai-drafts", icon: Sparkles, key: "aiDrafts" },
 ];
 
 export default function Sidebar() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [, setLang] = useState(i18n.language);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login", { replace: true });
-  };
+  useEffect(() => {
+    const onChange = (lng: string) => setLang(lng);
+
+    i18n.on("languageChanged", onChange);
+    return () => i18n.off("languageChanged", onChange);
+  }, []);
+
+  const displayName = user?.email
+    ? user.email.split("@")[0].replace(/^./, (c) => c.toUpperCase())
+    : "Advocate";
 
   return (
     <aside className="flex min-h-screen w-64 flex-col bg-slate-900 text-white">
-      <div className="border-b border-slate-800 p-6">
-        <h1 className="text-2xl font-bold text-blue-400">DraftLex</h1>
-        <p className="mt-1 text-sm text-slate-400">Advocate Workspace</p>
+      {/* Logo */}
+      <div className="border-b border-slate-800 px-6 py-6">
+        <h1 className="text-2xl font-bold tracking-wide">DraftLex</h1>
+        <p className="mt-1 text-sm text-slate-400">
+          {i18n.language.startsWith("hi")
+            ? "भारतीय विधिक प्रबंधन"
+            : "Legal Management"}
+        </p>
       </div>
 
-      <nav className="flex-1 space-y-1 p-4">
-        {menu.map((item) => {
-          const Icon = item.icon;
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-6">
+        <div className="space-y-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
 
-          return (
-            <NavLink
-              key={item.label}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-4 py-3 transition ${
-                  isActive
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                }`
-              }
-            >
-              <Icon size={20} />
-              {item.label}
-            </NavLink>
-          );
-        })}
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === "/"}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
+                    isActive
+                      ? "bg-blue-600 text-white shadow-lg"
+                      : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  }`
+                }
+              >
+                <Icon size={20} />
+                <span>{i18n.t(item.key)}</span>
+              </NavLink>
+            );
+          })}
+        </div>
       </nav>
 
-      <div className="border-t border-slate-800 p-4">
-        {/* <div className="mb-4">
-          <p className="text-sm font-semibold">
-            {user?.email.split("@")[0]}
-          </p>
-          <p className="text-xs text-slate-400">{user?.role}</p>
-        </div> */}
+      {/* Bottom Profile */}
+      <div className="border-t border-slate-800 p-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-600 text-lg font-semibold">
+            {displayName.charAt(0)}
+          </div>
 
-        <button
-          onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-red-300 transition hover:bg-red-900/30 hover:text-red-200"
-        >
-          <LogOut size={20} />
-          Logout
-        </button>
+          <div>
+            <div className="font-semibold">{displayName}</div>
+            <div className="text-xs text-slate-400">
+              {i18n.language.startsWith("hi") ? "अधिवक्ता" : "Advocate"}
+            </div>
+          </div>
+        </div>
       </div>
     </aside>
   );

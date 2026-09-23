@@ -12,5 +12,9 @@
   "noHearingsScheduled": "कोई सुनवाई निर्धारित नहीं है।",
   "judgeTBD": "न्यायाधीश निर्धारित नहीं",
   "courtTBD": "कोर्ट निर्धारित नहीं",
-  "upcoming": "आगामी"
+  "upcoming": "आगामी",
+  "dashboard": "डैशबोर्ड",  
+  "matters": "मामले",  
+  "documents": "दस्तावेज़",
+  "aiDrafts": "AI ड्राफ्ट"
 }

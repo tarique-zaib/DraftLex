@@ -12,5 +12,10 @@
   "noHearingsScheduled": "No hearings scheduled.",
   "judgeTBD": "Judge TBD",
   "courtTBD": "Court TBD",
-  "upcoming": "Upcoming"
+  "upcoming": "Upcoming",  
+  "dashboard": "Dashboard",  
+  "matters": "Matters",  
+  "documents": "Documents",
+  "aiDrafts": "AI Drafts"
+
 }
