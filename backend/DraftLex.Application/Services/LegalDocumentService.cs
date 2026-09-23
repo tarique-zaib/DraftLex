@@ -103,7 +103,8 @@ public class LegalDocumentService
             matter.Title,
             matter.Court,
             request.Facts,
-            advocateName);
+            advocateName,
+            request.Language);
 
         var document = new LegalDocument
         {

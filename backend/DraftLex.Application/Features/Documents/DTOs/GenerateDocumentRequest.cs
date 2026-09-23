@@ -7,4 +7,5 @@ public class GenerateDocumentRequest
     public string DocumentType { get; set; } = "Legal Notice";
 
     public string Facts { get; set; } = "";
+    public string Language { get; set; } = "English";
 }

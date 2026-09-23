@@ -1,3 +1,4 @@
+import i18n from "../i18n";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Sparkles, Loader2, BookOpen } from "lucide-react";
@@ -27,6 +28,7 @@ export default function AIDrafts() {
   const [form, setForm] = useState({
     matterId: "",
     documentType: "Legal Notice",
+    language: "English",
     clientName: "",
     matterTitle: "",
     court: "",
@@ -99,6 +101,7 @@ export default function AIDrafts() {
       const payload = {
         matterId: form.matterId,
         documentType: form.documentType,
+        language: form.language,
         facts: form.facts,
       };
 
@@ -130,9 +133,7 @@ export default function AIDrafts() {
         <main className="flex-1 p-8">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">
-                AI Drafts
-              </h1>
+              <h1 className="text-3xl font-bold text-slate-900">AI Drafts</h1>
 
               <p className="text-slate-500">
                 Generate professional legal drafts using DraftLex AI.
@@ -188,6 +189,24 @@ export default function AIDrafts() {
                   <option>Written Statement</option>
                 </select>
               </div>
+              {/* Language */}
+              <div>
+                <label className="mb-2 block text-sm font-medium">
+                  {i18n.t("documentLanguage")}
+                </label>
+
+                <select
+                  value={form.language}
+                  onChange={(e) =>
+                    setForm({ ...form, language: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-slate-300 p-3"
+                >
+                  <option value="English">English</option>
+                  <option value="Hindi">हिंदी</option>
+                  <option value="Bilingual">Bilingual</option>
+                </select>
+              </div>
 
               {/* Client */}
               <div>
@@ -217,9 +236,7 @@ export default function AIDrafts() {
 
               {/* Court */}
               <div>
-                <label className="mb-2 block text-sm font-medium">
-                  Court
-                </label>
+                <label className="mb-2 block text-sm font-medium">Court</label>
 
                 <input
                   value={form.court}
@@ -231,9 +248,7 @@ export default function AIDrafts() {
 
             {/* Facts */}
             <div className="mt-6 flex items-center justify-between">
-              <label className="text-sm font-medium">
-                Facts of the Case
-              </label>
+              <label className="text-sm font-medium">Facts of the Case</label>
 
               <button
                 type="button"
