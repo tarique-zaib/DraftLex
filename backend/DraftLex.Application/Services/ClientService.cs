@@ -1,16 +1,21 @@
 ﻿using DraftLex.Application.DTOs.Clients;
 using DraftLex.Application.Interfaces;
 using DraftLex.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace DraftLex.Application.Services;
 
 public class ClientService
 {
     private readonly IClientRepository _repo;
+    private readonly IDraftLexDbContext _db;
 
-    public ClientService(IClientRepository repo)
+    public ClientService(
+        IClientRepository repo,
+        IDraftLexDbContext db)
     {
         _repo = repo;
+        _db = db;
     }
 
     // Create Client
@@ -94,7 +99,26 @@ public class ClientService
             Id = client.Id,
             ClientCode = client.ClientCode,
             FullName = client.FullName,
-            Mobile = client.Mobile
+            Mobile = client.Mobile,
+            Email = client.Email,
+            Address = client.Address,
         };
+    }
+
+    // Client Matters
+    public async Task<List<ClientMatterResponse>> GetMattersAsync(Guid clientId)
+    {
+        return await _db.Matters
+            .Where(m => m.ClientId == clientId)
+            .OrderByDescending(m => m.CreatedAt)
+            .Select(m => new ClientMatterResponse
+            {
+                Id = m.Id,
+                MatterNumber = m.MatterNumber,
+                Title = m.Title,
+                Court = m.Court,
+                Status = m.Status
+            })
+            .ToListAsync();
     }
 }

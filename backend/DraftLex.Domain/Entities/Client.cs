@@ -19,7 +19,7 @@ public class Client
 
     public string Address { get; set; } = string.Empty;
 
-    public bool IsActive { get; set; } = true;
+    public bool IsActive { get; set; } = true;    
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

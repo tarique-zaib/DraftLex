@@ -60,4 +60,11 @@ public class ClientsController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpGet("{id:guid}/matters")]
+    public async Task<IActionResult> GetMatters(Guid id)
+    {
+        var matters = await _service.GetMattersAsync(id);
+        return Ok(matters);
+    }
 }
