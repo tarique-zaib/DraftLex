@@ -139,4 +139,89 @@ public class ClientService
             })
             .ToListAsync();
     }
+
+    public async Task<List<ClientDocumentResponse>> GetDocumentsAsync(Guid clientId)
+    {
+        return await _db.LegalDocuments
+            .Where(d => d.Matter.ClientId == clientId)
+            .OrderByDescending(d => d.UpdatedAt)
+            .Select(d => new ClientDocumentResponse
+            {
+                Id = d.Id,
+                MatterId = d.MatterId,
+                MatterTitle = d.Matter.Title,
+                Title = d.Title,
+                DocumentType = d.DocumentType,
+                Version = d.Version,
+                Status = d.Status,
+                UpdatedAt = d.UpdatedAt
+            })
+            .ToListAsync();
+    }
+
+    public async Task<List<ClientTimelineResponse>> GetTimelineAsync(Guid clientId)
+    {
+        var timeline = new List<ClientTimelineResponse>();
+
+        // 1. Client Created
+        var client = await _db.Clients
+            .FirstOrDefaultAsync(c => c.Id == clientId);
+
+        if (client != null)
+        {
+            timeline.Add(new ClientTimelineResponse
+            {
+                Date = client.CreatedAt,
+                Type = "Client",
+                Title = "Client Created",
+                Description = client.FullName
+            });
+        }
+
+        // 2. Matters Created
+        var matters = await _db.Matters
+            .Where(m => m.ClientId == clientId)
+            .ToListAsync();
+
+        timeline.AddRange(matters.Select(m => new ClientTimelineResponse
+        {
+            Date = m.CreatedAt,
+            Type = "Matter",
+            Title = "Matter Created",
+            Description = $"{m.MatterNumber} • {m.Title}"
+        }));
+
+        // 3. Hearings Scheduled
+        var hearings = await _db.Hearings
+            .Include(h => h.Matter)
+            .Where(h => h.Matter.ClientId == clientId)
+            .ToListAsync();
+
+        timeline.AddRange(hearings.Select(h => new ClientTimelineResponse
+        {
+            Date = h.HearingDate,
+            Type = "Hearing",
+            Title = "Hearing Scheduled",
+            Description = $"{h.Stage} • {h.Matter.Title}"
+        }));
+
+        // 4. Documents Generated
+        var documents = await _db.LegalDocuments
+            .Include(d => d.Matter)
+            .Where(d => d.Matter.ClientId == clientId)
+            .ToListAsync();
+
+        timeline.AddRange(documents.Select(d => new ClientTimelineResponse
+        {
+            Date = d.UpdatedAt,
+            Type = "Document",
+            Title = "Document Generated",
+            Description = $"{d.DocumentType} • {d.Title}"
+        }));
+
+        // 5. Sort newest first
+        return timeline
+            .OrderByDescending(x => x.Date)
+            .ToList();
+    }
 }

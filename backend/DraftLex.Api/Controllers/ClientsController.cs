@@ -75,4 +75,18 @@ public class ClientsController : ControllerBase
         var hearings = await _service.GetHearingsAsync(id);
         return Ok(hearings);
     }
+
+    [HttpGet("{id:guid}/documents")]
+    public async Task<IActionResult> GetDocuments(Guid id)
+    {
+        var documents = await _service.GetDocumentsAsync(id);
+        return Ok(documents);
+    }
+
+    [HttpGet("{id:guid}/timeline")]
+    public async Task<IActionResult> GetTimeline(Guid id)
+    {
+        var timeline = await _service.GetTimelineAsync(id);
+        return Ok(timeline);
+    }
 }

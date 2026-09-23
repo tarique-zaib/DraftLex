@@ -24,6 +24,24 @@ interface Client {
   notes?: string;
 }
 
+interface ClientDocument {
+  id: string;
+  matterId: string;
+  matterTitle: string;
+  title: string;
+  documentType: string;
+  version: number;
+  status: string;
+  updatedAt: string;
+}
+
+interface ClientTimeline {
+  date: string;
+  type: "Client" | "Matter" | "Hearing" | "Document";
+  title: string;
+  description: string;
+}
+
 export default function ClientDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -34,6 +52,10 @@ export default function ClientDetails() {
   const [showEdit, setShowEdit] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [matters, setMatters] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<ClientDocument[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [timeline, setTimeline] = useState<ClientTimeline[]>([]);
+  const [loadingTimeline, setLoadingTimeline] = useState(false);
 
   interface ClientHearing {
     id: string;
@@ -47,6 +69,40 @@ export default function ClientDetails() {
 
   const [hearings, setHearings] = useState<ClientHearing[]>([]);
   const [loadingHearings, setLoadingHearings] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== "timeline" || !id) return;
+
+    const loadTimeline = async () => {
+      try {
+        setLoadingTimeline(true);
+        const { data } = await api.get(`/Clients/${id}/timeline`);
+        setTimeline(data);
+      } catch (err) {
+        console.error("Failed to load timeline", err);
+      } finally {
+        setLoadingTimeline(false);
+      }
+    };
+
+    loadTimeline();
+  }, [activeTab, id]);
+
+  useEffect(() => {
+    if (activeTab !== "documents" || !id) return;
+
+    const loadDocuments = async () => {
+      try {
+        setLoadingDocuments(true);
+        const { data } = await api.get(`/Clients/${id}/documents`);
+        setDocuments(data);
+      } finally {
+        setLoadingDocuments(false);
+      }
+    };
+
+    loadDocuments();
+  }, [activeTab, id]);
 
   useEffect(() => {
     if (activeTab !== "hearings" || !id) return;
@@ -382,20 +438,114 @@ export default function ClientDetails() {
           {/* Documents */}
           {activeTab === "documents" && (
             <div className="rounded-xl border bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-xl font-semibold">Documents</h2>
-              <p className="text-slate-500">
-                AI drafts and legal documents will appear here.
-              </p>
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Client Documents</h2>
+
+                <Link
+                  to="/ai-drafts"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-white"
+                >
+                  + Generate Draft
+                </Link>
+              </div>
+
+              {loadingDocuments ? (
+                <div className="py-8 text-center text-slate-500">
+                  Loading documents...
+                </div>
+              ) : documents.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-8 text-center text-slate-500">
+                  No documents found.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b bg-slate-50">
+                      <tr className="text-left">
+                        <th className="px-3 py-3">Document</th>
+                        <th className="px-3 py-3">Matter</th>
+                        <th className="px-3 py-3">Type</th>
+                        <th className="px-3 py-3">Version</th>
+                        <th className="px-3 py-3">Updated</th>
+                        <th className="px-3 py-3">Action</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {documents.map((doc) => (
+                        <tr key={doc.id} className="border-b hover:bg-slate-50">
+                          <td className="px-3 py-4 font-medium">{doc.title}</td>
+                          <td className="px-3">{doc.matterTitle}</td>
+                          <td className="px-3">{doc.documentType}</td>
+                          <td className="px-3">v{doc.version}</td>
+                          <td className="px-3">
+                            {new Date(doc.updatedAt).toLocaleDateString(
+                              "en-IN",
+                            )}
+                          </td>
+                          <td className="px-3">
+                            <Link
+                              to={`/documents/${doc.id}`}
+                              className="text-blue-600 hover:underline"
+                            >
+                              Open
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
           {/* Timeline */}
           {activeTab === "timeline" && (
             <div className="rounded-xl border bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-xl font-semibold">Activity Timeline</h2>
-              <p className="text-slate-500">
-                Client activity history will appear here.
-              </p>
+              <h2 className="mb-5 text-xl font-semibold">Activity Timeline</h2>
+
+              {loadingTimeline ? (
+                <div className="py-8 text-center text-slate-500">
+                  Loading timeline...
+                </div>
+              ) : timeline.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-8 text-center text-slate-500">
+                  No activity found.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {timeline.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex gap-4 rounded-lg border p-4"
+                    >
+                      <div className="mt-1 h-3 w-3 rounded-full bg-blue-600"></div>
+
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold">{item.title}</h3>
+                          <span className="text-sm text-slate-500">
+                            {new Date(item.date).toLocaleDateString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 text-slate-600">
+                          {item.description}
+                        </p>
+
+                        <span className="mt-2 inline-block rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+                          {item.type}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
