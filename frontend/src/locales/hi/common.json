@@ -1,0 +1,16 @@
+{
+  "welcome": "स्वागत है, अधिवक्ता {{name}}",
+  "manageClientsMattersAiDrafts": "ग्राहकों, मामलों और AI कानूनी ड्राफ्ट का प्रबंधन करें।",
+  "clients": "ग्राहक",
+  "activeMatters": "सक्रिय मामले",
+  "hearings": "सुनवाई",
+  "aiDocuments": "AI दस्तावेज़",
+  "generateDraft": "AI ड्राफ्ट बनाएँ",
+  "recentMatters": "हाल के मामले",
+  "upcomingHearings": "आगामी सुनवाई",
+  "noMattersYet": "अभी तक कोई मामला नहीं है।",
+  "noHearingsScheduled": "कोई सुनवाई निर्धारित नहीं है।",
+  "judgeTBD": "न्यायाधीश निर्धारित नहीं",
+  "courtTBD": "कोर्ट निर्धारित नहीं",
+  "upcoming": "आगामी"
+}

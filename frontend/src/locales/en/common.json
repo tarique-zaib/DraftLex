@@ -1,0 +1,16 @@
+{
+  "welcome": "Welcome, Advocate {{name}}",
+  "manageClientsMattersAiDrafts": "Manage clients, matters and AI legal drafts.",
+  "clients": "Clients",
+  "activeMatters": "Active Matters",
+  "hearings": "Hearings",
+  "aiDocuments": "AI Documents",
+  "generateDraft": "Generate AI Draft",
+  "recentMatters": "Recent Matters",
+  "upcomingHearings": "Upcoming Hearings",
+  "noMattersYet": "No matters yet.",
+  "noHearingsScheduled": "No hearings scheduled.",
+  "judgeTBD": "Judge TBD",
+  "courtTBD": "Court TBD",
+  "upcoming": "Upcoming"
+}

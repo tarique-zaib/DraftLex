@@ -5,8 +5,10 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../api/client";
 import UserMenu from "../components/UserMenu";
 import Sidebar from "../components/Sidebar";
-import "../index.css";
+import LanguageToggle from "../components/LanguageToggle";
 import { useAuth } from "../context/AuthContext";
+import i18n from "../i18n";
+import "../index.css";
 
 function StatCard({
   title,
@@ -18,7 +20,7 @@ function StatCard({
   icon: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-slate-500">{title}</p>
@@ -35,6 +37,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Forces re-render when language changes
+  const [, setLang] = useState(i18n.language);
+
   const displayName = user?.email
     ? user.email.split("@")[0].replace(/^./, (c) => c.toUpperCase())
     : "Advocate";
@@ -48,6 +53,16 @@ export default function Dashboard() {
 
   const [matters, setMatters] = useState<any[]>([]);
   const [hearings, setHearings] = useState<any[]>([]);
+
+  useEffect(() => {
+    const onChange = (lng: string) => setLang(lng);
+
+    i18n.on("languageChanged", onChange);
+
+    return () => {
+      i18n.off("languageChanged", onChange);
+    };
+  }, []);
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -83,14 +98,15 @@ export default function Dashboard() {
         <Sidebar />
 
         <main className="flex-1 p-8">
+          {/* Header */}
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">
-                Welcome, Advocate {displayName}
+                {i18n.t("welcome", { name: displayName })}
               </h1>
 
               <p className="text-slate-500">
-                Manage clients, matters and AI legal drafts.
+                {i18n.t("manageClientsMattersAiDrafts")}
               </p>
             </div>
 
@@ -99,47 +115,54 @@ export default function Dashboard() {
                 onClick={() => navigate("/ai-drafts")}
                 className="rounded-lg bg-blue-600 px-5 py-3 font-medium text-white transition hover:bg-blue-700"
               >
-                + Generate AI Draft
+                + {i18n.t("generateDraft")}
               </button>
+
+              <LanguageToggle />
 
               <UserMenu />
             </div>
           </div>
 
+          {/* Stats */}
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             <StatCard
-              title="Clients"
+              title={i18n.t("clients")}
               value={stats.clients.toString()}
               icon={<Users size={24} />}
             />
 
             <StatCard
-              title="Active Matters"
+              title={i18n.t("activeMatters")}
               value={stats.matters.toString()}
               icon={<Scale size={24} />}
             />
 
             <StatCard
-              title="Hearings"
+              title={i18n.t("hearings")}
               value={stats.hearings.toString()}
               icon={<CalendarDays size={24} />}
             />
 
             <StatCard
-              title="AI Documents"
+              title={i18n.t("aiDocuments")}
               value={stats.documents.toString()}
               icon={<FileText size={24} />}
             />
           </div>
 
+          {/* Recent Matters & Hearings */}
           <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            {/* Recent Matters */}
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-xl font-semibold">Recent Matters</h2>
+              <h2 className="mb-4 text-xl font-semibold">
+                {i18n.t("recentMatters")}
+              </h2>
 
               <div className="space-y-3">
                 {matters.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-slate-500">
-                    No matters yet.
+                    {i18n.t("noMattersYet")}
                   </div>
                 ) : (
                   matters.map((m) => (
@@ -167,13 +190,16 @@ export default function Dashboard() {
               </div>
             </div>
 
+            {/* Upcoming Hearings */}
             <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-xl font-semibold">Upcoming Hearings</h2>
+              <h2 className="mb-4 text-xl font-semibold">
+                {i18n.t("upcomingHearings")}
+              </h2>
 
               <div className="space-y-3">
                 {hearings.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-slate-500">
-                    No hearings scheduled.
+                    {i18n.t("noHearingsScheduled")}
                   </div>
                 ) : (
                   hearings.map((h) => (
@@ -195,13 +221,13 @@ export default function Dashboard() {
                         </p>
 
                         <p className="text-xs text-slate-400">
-                          {h.judgeName || "Judge TBD"} •{" "}
-                          {h.courtRoom || "Court TBD"}
+                          {h.judgeName || i18n.t("judgeTBD")} •{" "}
+                          {h.courtRoom || i18n.t("courtTBD")}
                         </p>
                       </div>
 
                       <span className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700">
-                        Upcoming
+                        {i18n.t("upcoming")}
                       </span>
                     </div>
                   ))
