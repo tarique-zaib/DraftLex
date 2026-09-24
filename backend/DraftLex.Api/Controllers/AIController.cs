@@ -1,4 +1,5 @@
-﻿using DraftLex.Application.Features.AI.GenerateCaseSummary;
+﻿using DraftLex.Application.Features.AI.GenerateArguments;
+using DraftLex.Application.Features.AI.GenerateCaseSummary;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,7 +20,13 @@ public class AIController : ControllerBase
     public async Task<IActionResult> GetCaseSummary(Guid matterId)
     {
         var result = await _mediator.Send(new GenerateCaseSummaryQuery(matterId));
+        return Ok(result);
+    }
 
+    [HttpGet("arguments/{matterId:guid}")]
+    public async Task<IActionResult> GetArguments(Guid matterId)
+    {
+        var result = await _mediator.Send(new GenerateArgumentsQuery(matterId));
         return Ok(result);
     }
 }

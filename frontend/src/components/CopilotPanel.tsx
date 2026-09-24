@@ -119,6 +119,66 @@ export default function CopilotPanel({ matterId }: Props) {
     }
   };
 
+  const generateArguments = async () => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: i18n.language.startsWith("hi")
+          ? "अगली सुनवाई के लिए तर्क तैयार करें।"
+          : "Prepare arguments for the next hearing.",
+      },
+    ]);
+
+    setLoading(true);
+
+    try {
+      const { data } = await api.get(`/AI/arguments/${matterId}`);
+
+      const reply =
+        `## ${data.title}\n\n` +
+        `${data.introduction}\n\n` +
+        data.arguments.map((a: string) => `• ${a}`).join("\n") +
+        `\n\n**${
+          i18n.language.startsWith("hi") ? "निष्कर्ष" : "Conclusion"
+        }:**\n${data.conclusion}` +
+        (data.nextHearing
+          ? `\n\n**${
+              i18n.language.startsWith("hi") ? "अगली सुनवाई" : "Next Hearing"
+            }:** ${new Date(data.nextHearing).toLocaleDateString(
+              i18n.language.startsWith("hi") ? "hi-IN" : "en-IN",
+              {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              },
+            )}`
+          : "");
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: reply,
+        },
+      ]);
+    } catch (err) {
+      console.error(err);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: i18n.language.startsWith("hi")
+            ? "तर्क तैयार नहीं किए जा सके।"
+            : "Unable to generate arguments.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const sendMessage = async (text?: string) => {
     const message = (text ?? input).trim();
 
@@ -128,6 +188,12 @@ export default function CopilotPanel({ matterId }: Props) {
     if (message === "Summarize this case.") {
       setInput("");
       await summarizeCase();
+      return;
+    }
+
+    if (message === "Prepare arguments for the next hearing.") {
+      setInput("");
+      await generateArguments();
       return;
     }
 
