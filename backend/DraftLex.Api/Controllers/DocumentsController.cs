@@ -34,14 +34,30 @@ public class DocumentsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<DocumentResponse>> GetById(Guid id)
+    public async Task<IActionResult> GetById(Guid id)
     {
-        var result = await _service.GetByIdAsync(id);
+        var document = await _db.LegalDocuments
+            .Include(d => d.Matter)
+            .ThenInclude(m => m.Client)
+            .FirstOrDefaultAsync(d => d.Id == id);
 
-        if (result == null)
+        if (document == null)
             return NotFound();
 
-        return Ok(result);
+        return Ok(new
+        {
+            id = document.Id,
+            title = document.Title,
+            documentType = document.DocumentType,
+            content = document.Content,
+            version = document.Version,
+            status = document.Status,
+
+            matterId = document.MatterId,
+            matterTitle = document.Matter?.Title ?? "",
+            court = document.Matter?.Court ?? "",
+            clientName = document.Matter?.Client?.FullName ?? ""
+        });
     }
 
     [HttpPut("{id:guid}")]
