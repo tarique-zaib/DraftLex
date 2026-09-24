@@ -13,7 +13,7 @@ public class PdfExportService
     {
         QuestPDF.Settings.License = LicenseType.Community;
 
-        var cleanContent = CleanHtml(document.Content);
+        var body = CleanHtml(document.Content);
 
         return Document.Create(container =>
         {
@@ -22,129 +22,127 @@ public class PdfExportService
                 page.Size(PageSizes.A4);
                 page.Margin(45);
 
-                // ================= HEADER =================
-
+                // HEADER
                 page.Header().Column(header =>
                 {
-                    header.Spacing(4);
+                    header.Spacing(6);
 
                     header.Item()
                         .AlignCenter()
-                        .Text("IN THE COURT OF")
-                        .FontSize(18)
-                        .Bold();
+                        .Text($"IN THE COURT OF {(document.Matter?.Court ?? "DISTRICT COURT").ToUpper()}")
+                        .Bold()
+                        .FontSize(18);
 
                     header.Item()
                         .AlignCenter()
-                        .Text(document.Matter?.Court ?? "District Court")
-                        .FontSize(12);
+                        .Text(document.DocumentType.ToUpper())
+                        .Bold()
+                        .FontSize(16);
 
-                    header.Item()
-                        .PaddingTop(6)
-                        .AlignCenter()
-                        .Text(document.Title.ToUpper())
-                        .FontSize(16)
-                        .Bold();
-
-                    header.Item()
-                        .PaddingTop(8)
-                        .LineHorizontal(1);
+                    header.Item().PaddingTop(6).LineHorizontal(1);
                 });
 
-                // ================= CONTENT =================
-
-                page.Content().PaddingVertical(20).Column(column =>
+                // CONTENT
+                page.Content().PaddingVertical(18).Column(column =>
                 {
                     column.Spacing(12);
 
-                    // ---------- FROM / TO ----------
-
-                    column.Item().Column(party =>
-                    {
-                        party.Spacing(8);
-
-                        party.Item()
-                            .Text("FROM")
-                            .Bold()
-                            .FontSize(12);
-
-                        party.Item()
-                            .Text(document.Matter?.Client?.FullName ?? "Client")
-                            .FontSize(12);
-
-                        party.Item().LineHorizontal(0.5f);
-
-                        party.Item()
-                            .Text("TO")
-                            .Bold()
-                            .FontSize(12);
-
-                        party.Item()
-                            .Text(document.Matter?.OppositePartyName ?? "Recipient")
-                            .FontSize(12);
-
-                        if (!string.IsNullOrWhiteSpace(document.Matter?.OppositePartyAddress))
-                        {
-                            party.Item()
-                                .Text(document.Matter.OppositePartyAddress)
-                                .FontSize(11);
-                        }
-                    });
-
-                    column.Item().LineHorizontal(1);
-
-                    // ---------- Case Details ----------
-
                     column.Item().Row(row =>
                     {
-                        row.RelativeItem()
-                            .Text($"Matter No: {document.Matter?.MatterNumber ?? "N/A"}");
+                        row.RelativeItem().Text(text =>
+                        {
+                            text.Span("Matter: ").Bold();
+                            text.Span(document.Matter?.Title ?? document.Title);
+                        });
 
-                        row.RelativeItem()
-                            .AlignRight()
-                            .Text($"Date: {DateTime.Now:dd MMM yyyy}");
+                        row.RelativeItem().AlignRight().Text(text =>
+                        {
+                            text.Span("Date: ").Bold();
+                            text.Span(DateTime.Now.ToString("dd MMM yyyy"));
+                        });
                     });
 
-                    column.Item()
-                        .Text($"Document Type: {document.DocumentType}");
-
-                    column.Item()
-                        .Text($"Version: {document.Version}");
-
-                    column.Item().LineHorizontal(0.5f);
-
-                    // ---------- Subject ----------
-
-                    column.Item()
-                        .PaddingTop(8)
-                        .Text($"Subject: {document.Matter?.Title ?? document.Title}")
-                        .Bold()
-                        .FontSize(12);
-
-                    column.Item().PaddingTop(6);
-
-                    // ---------- Body ----------
-
-                    foreach (var paragraph in cleanContent.Split("\n\n"))
+                    column.Item().Text(text =>
                     {
-                        if (string.IsNullOrWhiteSpace(paragraph))
-                            continue;
+                        text.Span("Matter No: ").Bold();
+                        text.Span(document.Matter?.MatterNumber ?? "N/A");
+                    });
 
-                        column.Item()
-                            .Text(paragraph.Trim())
-                            .FontSize(12)
-                            .LineHeight(1.6f)
-                            .Justify();
+                    column.Item().Text(text =>
+                    {
+                        text.Span("Affiant: ").Bold();
+                        text.Span(document.Matter?.Client?.FullName ?? "Deponent");
+                    });
+
+                    column.Item().PaddingVertical(6).LineHorizontal(0.5f);
+
+                    foreach (var block in ParseBlocks(body))
+                    {
+                        switch (block.Type)
+                        {
+                            case BlockType.Paragraph:
+                                column.Item().Text(block.Text)
+                                    .FontSize(12)
+                                    .LineHeight(1.6f)
+                                    .Justify();
+                                break;
+
+                            case BlockType.Numbered:
+                                column.Item().Row(row =>
+                                {
+                                    row.ConstantItem(20)
+                                        .Text($"{block.Number}.")
+                                        .Bold();
+
+                                    row.RelativeItem()
+                                        .Text(block.Text)
+                                        .FontSize(12)
+                                        .LineHeight(1.6f)
+                                        .Justify();
+                                });
+                                break;
+
+                            case BlockType.Bullet:
+                                column.Item().Row(row =>
+                                {
+                                    row.ConstantItem(18).Text("•").Bold();
+
+                                    row.RelativeItem()
+                                        .Text(block.Text)
+                                        .FontSize(12)
+                                        .LineHeight(1.6f)
+                                        .Justify();
+                                });
+                                break;
+                        }
                     }
+
+                    column.Item().PaddingTop(18);
+
+                    column.Item().Text("VERIFICATION")
+                        .Bold()
+                        .FontSize(13);
+
+                    column.Item().Text(
+                        $"Verified at {document.Matter?.Court ?? "________"} on {DateTime.Now:dd MMM yyyy} that the contents of this affidavit are true and correct to the best of my knowledge and belief and nothing material has been concealed.")
+                        .FontSize(12)
+                        .LineHeight(1.5f);
+
+                    column.Item().PaddingTop(24);
+
+                    column.Item().AlignRight().Column(signature =>
+                    {
+                        signature.Item().Text("_____________________");
+                        signature.Item().Text(document.Matter?.Client?.FullName ?? "Deponent").Bold();
+                    });
                 });
 
-                // ================= FOOTER =================
-
+                // FOOTER
                 page.Footer().Column(footer =>
                 {
                     footer.Item().LineHorizontal(0.5f);
 
-                    footer.Item().PaddingTop(5).Row(row =>
+                    footer.Item().PaddingTop(6).Row(row =>
                     {
                         row.RelativeItem()
                             .Text("DraftLex Legal Management System")
@@ -155,7 +153,6 @@ public class PdfExportService
                             .Text(text =>
                             {
                                 text.DefaultTextStyle(x => x.FontSize(9));
-
                                 text.Span("Page ");
                                 text.CurrentPageNumber();
                                 text.Span(" of ");
@@ -168,7 +165,7 @@ public class PdfExportService
     }
 
     // =========================================================
-    // Helpers
+    // HTML CLEANER
     // =========================================================
 
     private static string CleanHtml(string? html)
@@ -177,6 +174,12 @@ public class PdfExportService
             return "";
 
         html = html.Replace("</p>", "\n\n", StringComparison.OrdinalIgnoreCase);
+        html = html.Replace("</li>", "\n", StringComparison.OrdinalIgnoreCase);
+        html = html.Replace("<li>", "", StringComparison.OrdinalIgnoreCase);
+        html = html.Replace("<ol>", "", StringComparison.OrdinalIgnoreCase);
+        html = html.Replace("</ol>", "", StringComparison.OrdinalIgnoreCase);
+        html = html.Replace("<ul>", "", StringComparison.OrdinalIgnoreCase);
+        html = html.Replace("</ul>", "", StringComparison.OrdinalIgnoreCase);
         html = html.Replace("<br>", "\n", StringComparison.OrdinalIgnoreCase);
         html = html.Replace("<br/>", "\n", StringComparison.OrdinalIgnoreCase);
         html = html.Replace("<br />", "\n", StringComparison.OrdinalIgnoreCase);
@@ -185,40 +188,79 @@ public class PdfExportService
 
         html = WebUtility.HtmlDecode(html);
 
-        html = Regex.Replace(html, @"\*\*(.*?)\*\*", "$1");
-
-        html = Regex.Replace(html, @"(?m)^#{1,6}\s*", "");
-
-        html = html.Replace("##", "");
-
-        html = new Regex(
-            @"^\s*LEGAL NOTICE\s*$",
-            RegexOptions.IgnoreCase | RegexOptions.Multiline)
-            .Replace(html, "", 1);
-
-        html = Regex.Replace(
-            html,
-            @"(?im)^Date:\s*.*$",
-            "");
-
-        html = Regex.Replace(
-            html,
-            @"(?is)To:\s*.*?(?=Subject:)",
-            "");
-
-        html = Regex.Replace(
-            html,
-            @"(?im)^Subject:\s*.*$",
-            "");
-
-        html = Regex.Replace(
-            html,
-            @"Advocate\s*\[Advocate Name\]\s*\[Bar Council No\.\]",
-            "",
-            RegexOptions.IgnoreCase);
+        html = Regex.Replace(html, @"^\s*Affidavit\s*$", "", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        html = Regex.Replace(html, @"^\s*Court:.*$", "", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        html = Regex.Replace(html, @"^\s*Matter:.*$", "", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        html = Regex.Replace(html, @"^\s*Affiant:.*$", "", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+        html = Regex.Replace(html, @"Verification[\s\S]*$", "", RegexOptions.IgnoreCase);
+        html = Regex.Replace(html, @"^\s*Deponent\s*$", "", RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
         html = Regex.Replace(html, @"\n{3,}", "\n\n");
 
         return html.Trim();
+    }
+
+    // =========================================================
+    // PARSER
+    // =========================================================
+
+    private enum BlockType
+    {
+        Paragraph,
+        Numbered,
+        Bullet
+    }
+
+    private class Block
+    {
+        public BlockType Type { get; set; }
+        public int Number { get; set; }
+        public string Text { get; set; } = "";
+    }
+
+    private static List<Block> ParseBlocks(string text)
+    {
+        var blocks = new List<Block>();
+
+        foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var value = line.Trim();
+
+            if (string.IsNullOrWhiteSpace(value))
+                continue;
+
+            var numbered = Regex.Match(value, @"^(\d+)\.\s*(.+)$");
+
+            if (numbered.Success)
+            {
+                blocks.Add(new Block
+                {
+                    Type = BlockType.Numbered,
+                    Number = int.Parse(numbered.Groups[1].Value),
+                    Text = numbered.Groups[2].Value
+                });
+
+                continue;
+            }
+
+            if (value.StartsWith("•"))
+            {
+                blocks.Add(new Block
+                {
+                    Type = BlockType.Bullet,
+                    Text = value.TrimStart('•', ' ')
+                });
+
+                continue;
+            }
+
+            blocks.Add(new Block
+            {
+                Type = BlockType.Paragraph,
+                Text = value
+            });
+        }
+
+        return blocks;
     }
 }
