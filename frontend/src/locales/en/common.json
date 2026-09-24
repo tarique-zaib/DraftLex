@@ -106,5 +106,11 @@
   "caseProgress": "Case Progress",
 
   "uploadEvidence": "Upload Evidence",
-  "editMatter": "Edit Matter"
+  "editMatter": "Edit Matter",
+
+  "aiCaseSummary": "AI Case Summary",
+  "keyFacts": "Key Facts",
+  "riskLevel": "Risk Level",
+  "nextRecommendedAction": "Next Recommended Action",
+  "regenerate": "Regenerate"
 }

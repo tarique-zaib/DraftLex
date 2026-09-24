@@ -11,6 +11,8 @@ import {
   Upload,
   Pencil,
   Sparkles,
+  ShieldAlert,
+  RefreshCw,
 } from "lucide-react";
 
 import { getMatter } from "../api/matters";
@@ -19,6 +21,7 @@ import { getDocumentsByMatter } from "../api/documents";
 import CopilotPanel from "../components/CopilotPanel";
 import { legalText } from "../utils/legalTranslations";
 import i18n from "../i18n";
+import api from "../api/client";
 
 export default function MatterWorkspace() {
   const { id } = useParams();
@@ -29,6 +32,16 @@ export default function MatterWorkspace() {
   const [hearings, setHearings] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [, setLang] = useState(i18n.language);
+
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
+  const [caseSummary, setCaseSummary] = useState<{
+    summary: string;
+    keyFacts: string[];
+    riskLevel: string;
+    nextAction: string;
+    nextHearing?: string;
+  } | null>(null);
 
   useEffect(() => {
     const handler = (lng: string) => setLang(lng);
@@ -55,6 +68,7 @@ export default function MatterWorkspace() {
 
         if (documentResult.status === "fulfilled")
           setDocuments(documentResult.value);
+        await loadCaseSummary();
 
         if (matterResult.status === "rejected")
           console.error(matterResult.reason);
@@ -87,6 +101,22 @@ export default function MatterWorkspace() {
       </div>
     );
   }
+
+  const loadCaseSummary = async () => {
+    if (!id) return;
+
+    try {
+      setSummaryLoading(true);
+
+      const { data } = await api.get(`/AI/case-summary/${id}`);
+
+      setCaseSummary(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
 
   const progress =
     matter.status === "Closed" ? 100 : matter.status === "Active" ? 65 : 35;
@@ -158,6 +188,130 @@ export default function MatterWorkspace() {
               </div>
             </div>
           </div>
+
+          {caseSummary && (
+            <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 shadow-sm">
+              <div className="mb-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-blue-600 p-3 text-white">
+                    <Sparkles size={22} />
+                  </div>
+
+                  <div>
+                    <h2 className="text-xl font-bold">
+                      {i18n.language.startsWith("hi")
+                        ? "एआई मामले का सारांश"
+                        : "AI Case Summary"}
+                    </h2>
+
+                    <p className="text-sm text-slate-500">
+                      {i18n.language.startsWith("hi")
+                        ? "मामले का स्वतः तैयार किया गया सारांश"
+                        : "Automatically generated case insights"}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={loadCaseSummary}
+                  disabled={summaryLoading}
+                  className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <RefreshCw
+                    size={16}
+                    className={summaryLoading ? "animate-spin" : ""}
+                  />
+
+                  {i18n.language.startsWith("hi")
+                    ? "पुनः तैयार करें"
+                    : "Regenerate"}
+                </button>
+              </div>
+
+              <p className="mb-6 leading-7 text-slate-700">
+                {caseSummary.summary}
+              </p>
+
+              <div className="grid gap-6 lg:grid-cols-3">
+                {/* Key Facts */}
+
+                <div>
+                  <h3 className="mb-3 font-semibold">
+                    {i18n.language.startsWith("hi")
+                      ? "मुख्य तथ्य"
+                      : "Key Facts"}
+                  </h3>
+
+                  <ul className="space-y-2">
+                    {caseSummary.keyFacts.map((fact, index) => (
+                      <li key={index} className="flex gap-2 text-sm">
+                        <span className="mt-1 h-2 w-2 rounded-full bg-blue-600" />
+                        {fact}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Risk */}
+
+                <div>
+                  <h3 className="mb-3 font-semibold">
+                    {i18n.language.startsWith("hi")
+                      ? "जोखिम स्तर"
+                      : "Risk Level"}
+                  </h3>
+
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
+                      caseSummary.riskLevel === "High"
+                        ? "bg-red-100 text-red-700"
+                        : caseSummary.riskLevel === "Medium"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-green-100 text-green-700"
+                    }`}
+                  >
+                    <ShieldAlert size={16} />
+                    {caseSummary.riskLevel}
+                  </span>
+                </div>
+
+                {/* Next Action */}
+
+                <div>
+                  <h3 className="mb-3 font-semibold">
+                    {i18n.language.startsWith("hi")
+                      ? "अगला कदम"
+                      : "Next Recommended Action"}
+                  </h3>
+
+                  <p className="text-sm text-slate-700">
+                    {caseSummary.nextAction}
+                  </p>
+
+                  {caseSummary.nextHearing && (
+                    <div className="mt-4 rounded-lg border border-blue-200 bg-white p-3">
+                      <div className="text-xs text-slate-500">
+                        {i18n.language.startsWith("hi")
+                          ? "अगली सुनवाई"
+                          : "Next Hearing"}
+                      </div>
+
+                      <div className="font-semibold text-blue-700">
+                        {new Date(caseSummary.nextHearing).toLocaleDateString(
+                          i18n.language.startsWith("hi") ? "hi-IN" : "en-IN",
+                          {
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                          },
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* QUICK INFO */}
           {/* DASHBOARD CARDS */}

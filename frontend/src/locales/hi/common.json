@@ -13,13 +13,13 @@
   "judgeTBD": "न्यायाधीश निर्धारित नहीं",
   "courtTBD": "कोर्ट निर्धारित नहीं",
   "upcoming": "आगामी",
-  "dashboard": "डैशबोर्ड",  
-  "matters": "मामले",  
+  "dashboard": "डैशबोर्ड",
+  "matters": "मामले",
   "documents": "दस्तावेज़",
   "aiDrafts": "AI ड्राफ्ट",
   "clientsPage": "मुवक्किल",
   "newClient": "नया मुवक्किल",
-  
+
   "clientName": "मुवक्किल का नाम",
   "mobile": "मोबाइल",
   "email": "ईमेल",
@@ -30,10 +30,10 @@
   "searchClients": "नाम, कोड या मोबाइल से खोजें...",
   "clientCode": "मुवक्किल कोड",
   "loading": "लोड हो रहा है...",
-  
+
   "noEmail": "ईमेल उपलब्ध नहीं",
   "view": "विवरण",
-  
+
   "manageMattersSubtitle": "सभी न्यायालय मामलों और कानूनी प्रकरणों का प्रबंधन करें।",
   "newMatter": "नया मामला",
   "searchMatters": "मामले खोजें...",
@@ -42,11 +42,11 @@
   "client": "मुवक्किल",
   "court": "न्यायालय",
   "matterType": "मामले का प्रकार",
-  
+
   "manageHearingsSubtitle": "आगामी न्यायालय सुनवाई और चरणों का प्रबंधन करें।",
   "newHearing": "नई सुनवाई",
   "todaysHearings": "आज की सुनवाई",
-  
+
   "completed": "पूर्ण",
   "searchHearings": "सुनवाई खोजें...",
   "loadingHearings": "सुनवाई लोड हो रही है...",
@@ -69,44 +69,41 @@
   "notAvailable": "उपलब्ध नहीं",
   "version": "संस्करण",
   "noAiDocuments": "अभी कोई AI दस्तावेज़ नहीं।",
-  
+
   "documentsSubtitle": "अपने सभी न्यायिक दस्तावेज़ एक स्थान पर देखें।",
   "searchDocuments": "दस्तावेज़ खोजें...",
   "loadingDocuments": "दस्तावेज़ लोड हो रहे हैं...",
   "noDocuments": "अभी कोई दस्तावेज़ उपलब्ध नहीं है।",
   "noDocumentsHint": "AI ड्राफ्ट तैयार करें और वह यहाँ दिखाई देगा।",
-  
+
   "matter": "मुकदमा",
   "updated": "अद्यतन",
   "open": "खोलें",
-  
+
   "clientProfile": "मुवक्किल प्रोफ़ाइल",
   "editClient": "मुवक्किल संपादित करें",
   "overview": "सारांश",
-  
+
   "timeline": "समयरेखा",
   "contactInformation": "संपर्क जानकारी",
   "quickActions": "त्वरित कार्य",
-  
+
   "scheduleHearing": "सुनवाई निर्धारित करें",
-  
+
   "notes": "टिप्पणियाँ",
   "noNotes": "कोई टिप्पणी नहीं जोड़ी गई।",
 
-  
-  
   "clientMatters": "मुवक्किल के मामले",
   "matterNo": "मामला संख्या",
   "title": "शीर्षक",
-  
+
   "clientHearings": "मुवक्किल की सुनवाई",
-  
 
   "clientDocuments": "मुवक्किल के दस्तावेज़",
   "document": "दस्तावेज़",
-  
+
   "type": "प्रकार",
-  
+
   "activityTimeline": "गतिविधि समयरेखा",
   "hearingScheduled": "सुनवाई निर्धारित हुई",
   "documentGenerated": "दस्तावेज़ तैयार हुआ",
@@ -123,16 +120,19 @@
   "finalOrder": "अंतिम आदेश",
 
   "fullName": "पूरा नाम",
-  
+
   "cancel": "रद्द करें",
   "saveChanges": "परिवर्तन सहेजें",
   "saving": "सहेजा जा रहा है...",
   "today": "आज",
-  
-  "caseProgress": "मामले की प्रगति",  
+
+  "caseProgress": "मामले की प्रगति",
   "uploadEvidence": "साक्ष्य अपलोड करें",
-  "editMatter": "मामला संपादित करें"
+  "editMatter": "मामला संपादित करें",
 
-
-
+  "aiCaseSummary": "एआई मामले का सारांश",
+  "keyFacts": "मुख्य तथ्य",
+  "riskLevel": "जोखिम स्तर",
+  "nextRecommendedAction": "अगला कदम",
+  "regenerate": "पुनः तैयार करें"
 }

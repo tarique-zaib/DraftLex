@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Bot, Send, Loader2 } from "lucide-react";
 import api from "../api/client";
+import i18n from "../i18n";
 
 interface Props {
   matterId: string;
@@ -22,39 +23,113 @@ const suggestions = [
 
 export default function CopilotPanel({ matterId }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const loadHistory = async () => {
       try {
         const { data } = await api.get(`/copilot/history/${matterId}`);
 
-        if (data.length === 0) {
+        if (Array.isArray(data) && data.length > 0) {
+          setMessages(data);
+        } else {
           setMessages([
             {
               role: "assistant",
-              content:
-                "Hello! I'm DraftLex Copilot. I already know this matter.",
+              content: i18n.language.startsWith("hi")
+                ? "नमस्ते! मैं DraftLex Copilot हूँ। मैं इस मामले को समझने में आपकी सहायता कर सकता हूँ।"
+                : "Hello! I'm DraftLex Copilot. I can help you understand this matter.",
             },
           ]);
-          return;
         }
-
-        setMessages(data);
       } catch (err) {
         console.error(err);
+
+        setMessages([
+          {
+            role: "assistant",
+            content: i18n.language.startsWith("hi")
+              ? "नमस्ते! मैं DraftLex Copilot हूँ।"
+              : "Hello! I'm DraftLex Copilot.",
+          },
+        ]);
       }
     };
 
     loadHistory();
   }, [matterId]);
 
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const summarizeCase = async () => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: i18n.language.startsWith("hi")
+          ? "इस मामले का सारांश बताइए।"
+          : "Summarize this case.",
+      },
+    ]);
+
+    setLoading(true);
+
+    try {
+      const { data } = await api.get(`/AI/case-summary/${matterId}`);
+
+      const reply =
+        `${data.summary}\n\n` +
+        `${i18n.language.startsWith("hi") ? "मुख्य तथ्य:" : "Key Facts:"}\n` +
+        data.keyFacts.map((f: string) => `• ${f}`).join("\n") +
+        `\n\n${i18n.language.startsWith("hi") ? "जोखिम स्तर" : "Risk Level"}: ${data.riskLevel}` +
+        `\n${i18n.language.startsWith("hi") ? "अगला कदम" : "Next Action"}: ${data.nextAction}` +
+        (data.nextHearing
+          ? `\n${i18n.language.startsWith("hi") ? "अगली सुनवाई" : "Next Hearing"}: ${new Date(
+              data.nextHearing,
+            ).toLocaleDateString(
+              i18n.language.startsWith("hi") ? "hi-IN" : "en-IN",
+              {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              },
+            )}`
+          : "");
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: reply,
+        },
+      ]);
+    } catch (err) {
+      console.error(err);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: i18n.language.startsWith("hi")
+            ? "मामले का सारांश तैयार नहीं किया जा सका।"
+            : "Unable to generate the case summary.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const sendMessage = async (text?: string) => {
     const message = (text ?? input).trim();
 
     if (!message || loading) return;
+
+    // Use real AI Summary endpoint
+    if (message === "Summarize this case.") {
+      setInput("");
+      await summarizeCase();
+      return;
+    }
 
     setMessages((prev) => [...prev, { role: "user", content: message }]);
     setInput("");
@@ -80,7 +155,9 @@ export default function CopilotPanel({ matterId }: Props) {
         ...prev,
         {
           role: "assistant",
-          content: "Sorry, I couldn't process your request.",
+          content: i18n.language.startsWith("hi")
+            ? "क्षमा करें, मैं आपका अनुरोध पूरा नहीं कर सका।"
+            : "Sorry, I couldn't process your request.",
         },
       ]);
     } finally {
@@ -90,13 +167,23 @@ export default function CopilotPanel({ matterId }: Props) {
 
   return (
     <div className="flex h-full flex-col rounded-2xl border bg-white shadow-sm">
+      {/* Header */}
+
       <div className="flex items-center gap-2 border-b p-4">
         <Bot className="text-blue-600" size={22} />
+
         <div>
           <h3 className="font-semibold">DraftLex Copilot</h3>
-          <p className="text-xs text-slate-500">Matter-aware AI Assistant</p>
+
+          <p className="text-xs text-slate-500">
+            {i18n.language.startsWith("hi")
+              ? "मामले का एआई सहायक"
+              : "Matter-aware AI Assistant"}
+          </p>
         </div>
       </div>
+
+      {/* Suggestions */}
 
       <div className="border-b p-3">
         <div className="flex flex-wrap gap-2">
@@ -113,11 +200,13 @@ export default function CopilotPanel({ matterId }: Props) {
         </div>
       </div>
 
+      {/* Chat */}
+
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.map((m, i) => (
           <div
             key={i}
-            className={`max-w-[90%] rounded-xl p-3 text-sm whitespace-pre-wrap ${
+            className={`max-w-[90%] whitespace-pre-wrap rounded-xl p-3 text-sm ${
               m.role === "user"
                 ? "ml-auto bg-blue-600 text-white"
                 : "bg-slate-100 text-slate-800"
@@ -130,10 +219,15 @@ export default function CopilotPanel({ matterId }: Props) {
         {loading && (
           <div className="flex items-center gap-2 rounded-xl bg-slate-100 p-3 text-sm">
             <Loader2 className="animate-spin" size={16} />
-            DraftLex AI is thinking...
+
+            {i18n.language.startsWith("hi")
+              ? "DraftLex AI सोच रहा है..."
+              : "DraftLex AI is thinking..."}
           </div>
         )}
       </div>
+
+      {/* Input */}
 
       <div className="border-t p-3">
         <div className="flex gap-2">
@@ -147,7 +241,11 @@ export default function CopilotPanel({ matterId }: Props) {
                 sendMessage();
               }
             }}
-            placeholder="Ask Copilot..."
+            placeholder={
+              i18n.language.startsWith("hi")
+                ? "Copilot से पूछें..."
+                : "Ask Copilot..."
+            }
             className="flex-1 resize-none rounded-lg border p-3 outline-none focus:border-blue-500"
           />
 
@@ -161,7 +259,9 @@ export default function CopilotPanel({ matterId }: Props) {
         </div>
 
         <p className="mt-2 text-xs text-slate-500">
-          Enter to send · Shift+Enter for newline
+          {i18n.language.startsWith("hi")
+            ? "Enter भेजने के लिए · Shift+Enter नई पंक्ति के लिए"
+            : "Enter to send · Shift+Enter for newline"}
         </p>
       </div>
     </div>
