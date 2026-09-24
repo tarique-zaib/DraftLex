@@ -1,6 +1,6 @@
 import i18n from "../i18n";
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Sparkles, Loader2, BookOpen } from "lucide-react";
 import api from "../api/client";
 import Sidebar from "../components/Sidebar";
@@ -34,6 +34,11 @@ export default function AIDrafts() {
   const [loading, setLoading] = useState(false);
   const [showClauseLibrary, setShowClauseLibrary] = useState(false);
   const [matters, setMatters] = useState<Matter[]>([]);
+
+  const location = useLocation();
+
+  const aiContent =
+    (location.state as { aiContent?: string } | null)?.aiContent ?? "";
 
   const [form, setForm] = useState({
     matterId: "",
@@ -84,6 +89,19 @@ export default function AIDrafts() {
     return () => window.removeEventListener("keydown", handleShortcut);
   }, [searchParams]);
 
+  useEffect(() => {
+    if (!aiContent) return;
+
+    setForm((prev) => ({
+      ...prev,
+      facts: aiContent,
+      documentType:
+        aiContent.includes("AFFIDAVIT") || aiContent.includes("शपथ")
+          ? "Affidavit"
+          : prev.documentType,
+    }));
+  }, [aiContent]);
+
   const selectMatter = (id: string) => {
     const matter = matters.find((m) => m.id === id);
 
@@ -93,6 +111,7 @@ export default function AIDrafts() {
       clientName: matter?.client?.fullName ?? "",
       matterTitle: matter?.title ?? "",
       court: matter?.court ?? "",
+      facts: aiContent || prev.facts,
     }));
   };
 
@@ -310,10 +329,26 @@ export default function AIDrafts() {
               </div>
 
               <ul className="space-y-2 text-sm text-blue-700">
-                <li>• {isHindi ? "उचित कानूनी प्रारूप" : "Proper legal formatting"}</li>
-                <li>• {isHindi ? "दिनांक एवं पक्षकार विवरण" : "Party and date details"}</li>
-                <li>• {isHindi ? "तथ्यों का क्रमबद्ध विवरण" : "Structured facts section"}</li>
-                <li>• {isHindi ? "प्रासंगिक कानूनी आधार" : "Relevant legal grounds"}</li>
+                <li>
+                  •{" "}
+                  {isHindi ? "उचित कानूनी प्रारूप" : "Proper legal formatting"}
+                </li>
+                <li>
+                  •{" "}
+                  {isHindi
+                    ? "दिनांक एवं पक्षकार विवरण"
+                    : "Party and date details"}
+                </li>
+                <li>
+                  •{" "}
+                  {isHindi
+                    ? "तथ्यों का क्रमबद्ध विवरण"
+                    : "Structured facts section"}
+                </li>
+                <li>
+                  •{" "}
+                  {isHindi ? "प्रासंगिक कानूनी आधार" : "Relevant legal grounds"}
+                </li>
                 <li>• {isHindi ? "अंतिम प्रार्थना" : "Final prayer clause"}</li>
               </ul>
             </div>

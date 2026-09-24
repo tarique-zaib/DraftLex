@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Bot, Send, Loader2 } from "lucide-react";
+import { Bot, Send, Loader2, SquarePen } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import i18n from "../i18n";
 
@@ -10,6 +11,7 @@ interface Props {
 interface Message {
   role: "user" | "assistant";
   content: string;
+  openInEditor?: boolean;
 }
 
 const suggestions = [
@@ -25,6 +27,7 @@ export default function CopilotPanel({ matterId }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadHistory = async () => {
@@ -100,6 +103,7 @@ export default function CopilotPanel({ matterId }: Props) {
         {
           role: "assistant",
           content: reply,
+          openInEditor: true,
         },
       ]);
     } catch (err) {
@@ -160,6 +164,7 @@ export default function CopilotPanel({ matterId }: Props) {
         {
           role: "assistant",
           content: reply,
+          openInEditor: true,
         },
       ]);
     } catch (err) {
@@ -208,6 +213,7 @@ export default function CopilotPanel({ matterId }: Props) {
         {
           role: "assistant",
           content: reply,
+          openInEditor: true,
         },
       ]);
     } catch (err) {
@@ -225,6 +231,15 @@ export default function CopilotPanel({ matterId }: Props) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openInEditor = (content: string) => {
+    navigate(`/ai-drafts?matterId=${matterId}`, {
+      state: {
+        aiContent: content,
+        source: "copilot",
+      },
+    });
   };
 
   const sendMessage = async (text?: string) => {
@@ -324,15 +339,29 @@ export default function CopilotPanel({ matterId }: Props) {
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`max-w-[90%] whitespace-pre-wrap rounded-xl p-3 text-sm ${
-              m.role === "user"
-                ? "ml-auto bg-blue-600 text-white"
-                : "bg-slate-100 text-slate-800"
-            }`}
-          >
-            {m.content}
+          <div key={i}>
+            <div
+              className={`max-w-[90%] whitespace-pre-wrap rounded-xl p-3 text-sm ${
+                m.role === "user"
+                  ? "ml-auto bg-blue-600 text-white"
+                  : "bg-slate-100 text-slate-800"
+              }`}
+            >
+              {m.content}
+            </div>
+
+            {m.role === "assistant" && m.openInEditor && (
+              <button
+                onClick={() => openInEditor(m.content)}
+                className="mt-2 flex items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm text-blue-700 hover:bg-blue-50"
+              >
+                <SquarePen size={16} />
+
+                {i18n.language.startsWith("hi")
+                  ? "एडिटर में खोलें"
+                  : "Open in Editor"}
+              </button>
+            )}
           </div>
         ))}
 
