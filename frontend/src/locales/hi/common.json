@@ -127,7 +127,12 @@
   "cancel": "रद्द करें",
   "saveChanges": "परिवर्तन सहेजें",
   "saving": "सहेजा जा रहा है...",
-  "today": "आज"
+  "today": "आज",
+  
+  "caseProgress": "मामले की प्रगति",  
+  "uploadEvidence": "साक्ष्य अपलोड करें",
+  "editMatter": "मामला संपादित करें"
+
 
 
 }

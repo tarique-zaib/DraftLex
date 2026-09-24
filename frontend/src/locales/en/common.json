@@ -12,14 +12,14 @@
   "noHearingsScheduled": "No hearings scheduled.",
   "judgeTBD": "Judge TBD",
   "courtTBD": "Court TBD",
-  "upcoming": "Upcoming",  
-  "dashboard": "Dashboard",  
-  "matters": "Matters",  
+  "upcoming": "Upcoming",
+  "dashboard": "Dashboard",
+  "matters": "Matters",
   "documents": "Documents",
   "aiDrafts": "AI Drafts",
   "clientsPage": "Clients",
   "newClient": "New Client",
-  
+
   "clientName": "Client Name",
   "mobile": "Mobile",
   "email": "Email",
@@ -44,8 +44,7 @@
   "noClients": "No clients found.",
   "noEmail": "No email",
   "view": "View",
-  
-  
+
   "manageMattersSubtitle": "Manage all court matters and legal cases.",
   "newMatter": "New Matter",
   "searchMatters": "Search matters...",
@@ -78,14 +77,13 @@
   "notAvailable": "Not Available",
   "version": "Version",
   "noAiDocuments": "No AI documents yet.",
-  
-  
+
   "documentsSubtitle": "View all your court-ready legal documents.",
   "searchDocuments": "Search documents...",
   "loadingDocuments": "Loading documents...",
   "noDocuments": "No documents available.",
   "noDocumentsHint": "Generate an AI draft and it will appear here.",
-  
+
   "matter": "Matter",
   "updated": "Updated",
   "open": "Open",
@@ -104,6 +102,9 @@
   "hearingScheduled": "Hearing Scheduled",
   "hearingRescheduled": "Hearing Rescheduled",
   "hearing": "Hearing",
-  "documentGenerated": "Document Generated"
+  "documentGenerated": "Document Generated",
+  "caseProgress": "Case Progress",
 
+  "uploadEvidence": "Upload Evidence",
+  "editMatter": "Edit Matter"
 }

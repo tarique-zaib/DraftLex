@@ -8,6 +8,9 @@ import {
   User,
   Building2,
   Gavel,
+  Upload,
+  Pencil,
+  Sparkles,
 } from "lucide-react";
 
 import { getMatter } from "../api/matters";
@@ -85,6 +88,9 @@ export default function MatterWorkspace() {
     );
   }
 
+  const progress =
+    matter.status === "Closed" ? 100 : matter.status === "Active" ? 65 : 35;
+
   return (
     <div className="min-h-screen bg-slate-100 p-8">
       {/* Back */}
@@ -154,7 +160,9 @@ export default function MatterWorkspace() {
           </div>
 
           {/* QUICK INFO */}
-          <div className="grid gap-4 md:grid-cols-4">
+          {/* DASHBOARD CARDS */}
+
+          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
             <InfoCard
               icon={<Scale className="text-blue-600" />}
               label={i18n.t("matterType")}
@@ -178,6 +186,43 @@ export default function MatterWorkspace() {
               label={i18n.t("judge")}
               value={matter.judgeName || i18n.t("notAssigned")}
             />
+
+            <InfoCard
+              icon={<CalendarDays className="text-blue-600" />}
+              label={i18n.t("hearings")}
+              value={hearings.length.toString()}
+            />
+
+            <InfoCard
+              icon={<FileText className="text-blue-600" />}
+              label={i18n.t("documents")}
+              value={documents.length.toString()}
+            />
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold">
+                {i18n.language.startsWith("hi")
+                  ? "मामले की प्रगति"
+                  : "Case Progress"}
+              </h2>
+
+              <span className="font-semibold text-blue-700">{progress}%</span>
+            </div>
+
+            <div className="h-3 overflow-hidden rounded-full bg-slate-200">
+              <div
+                className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+
+            <p className="mt-3 text-sm text-slate-500">
+              {i18n.language.startsWith("hi")
+                ? "मामले की वर्तमान स्थिति के आधार पर अनुमानित प्रगति।"
+                : "Estimated progress based on the current case status."}
+            </p>
           </div>
 
           {/* DETAILS */}
@@ -252,9 +297,7 @@ export default function MatterWorkspace() {
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-semibold">
-                            {legalText(h.stage)}
-                          </p>
+                          <p className="font-semibold">{legalText(h.stage)}</p>
 
                           <p className="text-sm text-slate-500">
                             {new Date(h.hearingDate).toLocaleDateString(
@@ -303,8 +346,7 @@ export default function MatterWorkspace() {
                           <p className="font-semibold">{d.title}</p>
 
                           <p className="text-sm text-slate-500">
-                            {i18n.t("version")} {d.version} •{" "}
-                            {d.documentType}
+                            {i18n.t("version")} {d.version} • {d.documentType}
                           </p>
 
                           <p className="text-xs text-slate-400">
@@ -337,7 +379,47 @@ export default function MatterWorkspace() {
         </div>
 
         {/* RIGHT - AI COPILOT */}
-        <div className="xl:sticky xl:top-8 xl:h-[calc(100vh-64px)]">
+        {/* RIGHT PANEL */}
+
+        <div className="space-y-6 xl:sticky xl:top-8">
+          <Section
+            title={
+              i18n.language.startsWith("hi") ? "त्वरित कार्य" : "Quick Actions"
+            }
+          >
+            <button
+              onClick={() => navigate(`/hearings?matterId=${matter.id}`)}
+              className="flex w-full items-center gap-3 rounded-lg border border-slate-300 p-3 hover:bg-slate-50"
+            >
+              <CalendarDays size={18} />
+              {i18n.language.startsWith("hi")
+                ? "सुनवाई निर्धारित करें"
+                : "Schedule Hearing"}
+            </button>
+
+            <button
+              onClick={() => navigate(`/ai-drafts?matterId=${matter.id}`)}
+              className="flex w-full items-center gap-3 rounded-lg border border-slate-300 p-3 hover:bg-slate-50"
+            >
+              <Sparkles size={18} />
+              {i18n.t("generateDraft")}
+            </button>
+
+            <button className="flex w-full items-center gap-3 rounded-lg border border-slate-300 p-3 hover:bg-slate-50">
+              <Upload size={18} />
+              {i18n.language.startsWith("hi")
+                ? "साक्ष्य अपलोड करें"
+                : "Upload Evidence"}
+            </button>
+
+            <button className="flex w-full items-center gap-3 rounded-lg border border-slate-300 p-3 hover:bg-slate-50">
+              <Pencil size={18} />
+              {i18n.language.startsWith("hi")
+                ? "मामला संपादित करें"
+                : "Edit Matter"}
+            </button>
+          </Section>
+
           <CopilotPanel matterId={matter.id} />
         </div>
       </div>
