@@ -1,4 +1,5 @@
-﻿using DraftLex.Application.Features.AI.GenerateArguments;
+﻿using DraftLex.Application.Features.AI.GenerateAffidavit;
+using DraftLex.Application.Features.AI.GenerateArguments;
 using DraftLex.Application.Features.AI.GenerateCaseSummary;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -27,6 +28,13 @@ public class AIController : ControllerBase
     public async Task<IActionResult> GetArguments(Guid matterId)
     {
         var result = await _mediator.Send(new GenerateArgumentsQuery(matterId));
+        return Ok(result);
+    }
+
+    [HttpGet("affidavit/{matterId:guid}")]
+    public async Task<IActionResult> GetAffidavit(Guid matterId)
+    {
+        var result = await _mediator.Send(new GenerateAffidavitQuery(matterId));
         return Ok(result);
     }
 }

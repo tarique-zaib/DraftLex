@@ -179,6 +179,54 @@ export default function CopilotPanel({ matterId }: Props) {
     }
   };
 
+  const generateAffidavit = async () => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        content: i18n.language.startsWith("hi")
+          ? "शपथपत्र तैयार करें।"
+          : "Draft an affidavit.",
+      },
+    ]);
+
+    setLoading(true);
+
+    try {
+      const { data } = await api.get(`/AI/affidavit/${matterId}`);
+
+      const reply =
+        `# ${data.title}\n\n` +
+        `**${i18n.language.startsWith("hi") ? "न्यायालय" : "Court"}:** ${data.court}\n` +
+        `**${i18n.language.startsWith("hi") ? "मामला" : "Matter"}:** ${data.matterTitle}\n` +
+        `**${i18n.language.startsWith("hi") ? "शपथकर्ता" : "Affiant"}:** ${data.affiantName}\n\n` +
+        `${data.body}\n\n` +
+        `${data.verification}`;
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: reply,
+        },
+      ]);
+    } catch (err) {
+      console.error(err);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: i18n.language.startsWith("hi")
+            ? "शपथपत्र तैयार नहीं किया जा सका।"
+            : "Unable to generate affidavit.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const sendMessage = async (text?: string) => {
     const message = (text ?? input).trim();
 
@@ -194,6 +242,12 @@ export default function CopilotPanel({ matterId }: Props) {
     if (message === "Prepare arguments for the next hearing.") {
       setInput("");
       await generateArguments();
+      return;
+    }
+
+    if (message === "Draft an affidavit.") {
+      setInput("");
+      await generateAffidavit();
       return;
     }
 
