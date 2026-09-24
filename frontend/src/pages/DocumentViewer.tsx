@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Save, CheckCircle, ArrowLeft } from "lucide-react";
+import { marked } from "marked";
+
 import api from "../api/client";
 import Sidebar from "../components/Sidebar";
 import UserMenu from "../components/UserMenu";
 import LegalEditor from "../components/LegalEditor";
-import { marked } from "marked";
 
 interface Document {
   id: string;
@@ -14,12 +15,17 @@ interface Document {
   content: string;
   version: number;
   status: string;
+
+  matterId: string;
+  matterTitle: string;
+  court: string;
+  clientName: string;
 }
 
 export default function DocumentViewer() {
   const { id } = useParams();
 
-  const [document, setDocument] = useState<Document | null>(null);
+  const [document, setDocument] = useState<Document | null>(null);  
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -71,7 +77,6 @@ export default function DocumentViewer() {
       });
 
       setSaved(true);
-
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       console.error("Save failed", err);
@@ -161,7 +166,14 @@ export default function DocumentViewer() {
           </div>
 
           {/* Editor */}
-          <LegalEditor content={content} onChange={setContent} />
+          <LegalEditor
+            content={content}
+            onChange={setContent}
+            title={document.documentType}
+            matterTitle={document.matterTitle}
+            court={document.court}
+            client={document.clientName}
+          />
         </main>
       </div>
     </div>

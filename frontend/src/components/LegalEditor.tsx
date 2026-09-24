@@ -18,11 +18,19 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
+  Download,
 } from "lucide-react";
+import { exportToDocx } from "../utils/docxExport";
 
 interface Props {
   content: string;
   onChange: (html: string) => void;
+
+  // Optional metadata for DOCX export
+  title?: string;
+  matterTitle?: string;
+  court?: string;
+  client?: string;
 }
 
 function ToolbarButton({
@@ -49,7 +57,14 @@ function ToolbarButton({
   );
 }
 
-export default function LegalEditor({ content, onChange }: Props) {
+export default function LegalEditor({
+  content,
+  onChange,
+  title = "Legal Document",
+  matterTitle = "Matter",
+  court,
+  client,
+}: Props) {
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -71,6 +86,32 @@ export default function LegalEditor({ content, onChange }: Props) {
   });
 
   if (!editor) return null;
+
+  const handleExportDocx = async () => {
+    try {
+      const normalizedDocumentType = title.toLowerCase().includes("affidavit")
+        ? "Affidavit"
+        : title.toLowerCase().includes("legal notice")
+          ? "Legal Notice"
+          : title.toLowerCase().includes("written statement")
+            ? "Written Statement"
+            : title.toLowerCase().includes("arguments")
+              ? "Arguments"
+              : title;
+
+      await exportToDocx({
+        documentType: normalizedDocumentType,
+        title,
+        matterTitle,
+        court,
+        client,
+        content: editor.getHTML(),
+      });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to export DOCX.");
+    }
+  };
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm">
@@ -153,6 +194,19 @@ export default function LegalEditor({ content, onChange }: Props) {
         >
           <AlignRight size={18} />
         </ToolbarButton>
+
+        {/* Divider */}
+        <div className="mx-1 h-8 w-px bg-slate-300" />
+
+        {/* Export DOCX */}
+        <button
+          type="button"
+          onClick={handleExportDocx}
+          className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+        >
+          <Download size={16} />
+          Export DOCX
+        </button>
       </div>
 
       {/* Editor */}
