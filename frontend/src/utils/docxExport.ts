@@ -26,43 +26,42 @@ function parseHtmlToParagraphs(html: string): Paragraph[] {
 
   const paragraphs: Paragraph[] = [];
 
-  const textRuns = (el: HTMLElement): TextRun[] =>
-    Array.from(el.childNodes).flatMap((node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        return [new TextRun(node.textContent || "")];
-      }
+  function parseNode(
+    node: Node,
+    bold = false,
+    italic = false,
+    underline = false,
+  ): TextRun[] {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || "";
 
-      if (!(node instanceof HTMLElement)) return [];
+      if (!text.trim()) return [];
 
-      const tag = node.tagName.toLowerCase();
-      const child = textRuns(node);
+      return [
+        new TextRun({
+          text,
+          bold,
+          italics: italic,
+          underline: underline ? {} : undefined,
+        }),
+      ];
+    }
 
-      if (tag === "strong" || tag === "b") {
-        return child.map(
-          (c) =>
-            new TextRun({
-              text: c.root[1]?.text || node.textContent || "",
-              bold: true,
-            }),
-        );
-      }
+    if (!(node instanceof HTMLElement)) return [];
 
-      if (tag === "em" || tag === "i") {
-        return child.map(
-          (c) =>
-            new TextRun({
-              text: c.root[1]?.text || node.textContent || "",
-              italics: true,
-            }),
-        );
-      }
+    const tag = node.tagName.toLowerCase();
 
-      return child.length
-        ? child
-        : [new TextRun(node.textContent || "")];
-    });
+    const nextBold = bold || tag === "strong" || tag === "b";
+    const nextItalic = italic || tag === "em" || tag === "i";
+    const nextUnderline = underline || tag === "u";
 
-  Array.from(div.children).forEach((el) => {
+    return Array.from(node.childNodes).flatMap((child) =>
+      parseNode(child, nextBold, nextItalic, nextUnderline),
+    );
+  }
+
+  Array.from(div.children).forEach((element) => {
+    const el = element as HTMLElement;
     const tag = el.tagName.toLowerCase();
 
     if (tag === "p") {
@@ -81,9 +80,10 @@ function parseHtmlToParagraphs(html: string): Paragraph[] {
       paragraphs.push(
         new Paragraph({
           spacing: { after: 180 },
-          children: textRuns(el),
+          children: parseNode(el),
         }),
       );
+      return;
     }
 
     if (tag === "ol") {
@@ -99,6 +99,7 @@ function parseHtmlToParagraphs(html: string): Paragraph[] {
           }),
         );
       });
+      return;
     }
 
     if (tag === "ul") {
@@ -107,21 +108,15 @@ function parseHtmlToParagraphs(html: string): Paragraph[] {
           new Paragraph({
             bullet: { level: 0 },
             spacing: { after: 180 },
-            children: [
-              new TextRun(li.textContent?.trim() || ""),
-            ],
+            children: [new TextRun(li.textContent?.trim() || "")],
           }),
         );
       });
+      return;
     }
 
     if (tag === "hr") {
-      paragraphs.push(
-        new Paragraph({
-          spacing: { after: 240 },
-          children: [new TextRun("")],
-        }),
-      );
+      paragraphs.push(new Paragraph({ spacing: { after: 240 } }));
     }
   });
 
@@ -275,9 +270,7 @@ function buildLegalNotice(options: DocxExportOptions): Paragraph[] {
 
           new Paragraph({
             spacing: { after: 220 },
-            children: [
-              new TextRun(options.oppositePartyAddress || ""),
-            ],
+            children: [new TextRun(options.oppositePartyAddress || "")],
           }),
         ]
       : []),
