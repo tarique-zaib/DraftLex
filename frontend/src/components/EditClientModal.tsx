@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import api from "../api/client";
+import i18n from "../i18n";
 
 interface Client {
   id: string;
@@ -71,7 +72,7 @@ export default function EditClientModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-xl rounded-xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b p-5">
-          <h2 className="text-xl font-semibold">Edit Client</h2>
+          <h2 className="text-xl font-semibold">{i18n.t("editClient")}</h2>
 
           <button onClick={onClose}>
             <X />
@@ -83,7 +84,7 @@ export default function EditClientModal({
             value={form.fullName}
             onChange={(e) => update("fullName", e.target.value)}
             className="w-full rounded-lg border p-3"
-            placeholder="Full Name"
+            placeholder={i18n.t("fullName")}
           />
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -91,14 +92,14 @@ export default function EditClientModal({
               value={form.mobile}
               onChange={(e) => update("mobile", e.target.value)}
               className="rounded-lg border p-3"
-              placeholder="Mobile"
+              placeholder={i18n.t("mobile")}
             />
 
             <input
               value={form.email}
               onChange={(e) => update("email", e.target.value)}
               className="rounded-lg border p-3"
-              placeholder="Email"
+              placeholder={i18n.t("email")}
             />
           </div>
 
@@ -106,7 +107,7 @@ export default function EditClientModal({
             value={form.address}
             onChange={(e) => update("address", e.target.value)}
             className="w-full rounded-lg border p-3"
-            placeholder="Address"
+            placeholder={i18n.t("address")}
           />
 
           <textarea
@@ -114,7 +115,7 @@ export default function EditClientModal({
             onChange={(e) => update("notes", e.target.value)}
             className="w-full rounded-lg border p-3"
             rows={4}
-            placeholder="Notes"
+            placeholder={i18n.t("notes")}
           />
         </div>
 
@@ -123,7 +124,7 @@ export default function EditClientModal({
             onClick={onClose}
             className="rounded-lg border px-5 py-2"
           >
-            Cancel
+            {i18n.t("cancel")}
           </button>
 
           <button
@@ -131,7 +132,7 @@ export default function EditClientModal({
             disabled={loading}
             className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700"
           >
-            {loading ? "Saving..." : "Save Changes"}
+            {loading ? i18n.t("saving") : i18n.t("saveChanges")}
           </button>
         </div>
       </div>

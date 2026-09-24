@@ -5,7 +5,7 @@ using DraftLex.Application.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
+using DraftLex.Application.Features.Hearings.GetById;
 namespace DraftLex.Api.Controllers;
 
 [ApiController]
@@ -78,5 +78,13 @@ public class HearingsController : ControllerBase
         await _db.SaveChangesAsync(cancellationToken);
 
         return Ok(new { success = true });
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var hearing = await _mediator.Send(new GetHearingByIdQuery(id));
+
+        return Ok(hearing);
     }
 }

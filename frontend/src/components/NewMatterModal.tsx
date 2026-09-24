@@ -1,5 +1,18 @@
+import i18n from "../i18n";
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import {
+  X,
+  User,
+  Scale,
+  Shield,
+  Home,
+  Users,
+  Briefcase,
+  Building,
+  Gavel,
+  FileText,
+  Loader2,
+} from "lucide-react";
 import api from "../api/client";
 
 interface Client {
@@ -13,13 +26,29 @@ interface Props {
   onCreated: () => void;
 }
 
+const matterTypes = [
+  { value: "Civil", hi: "दीवानी", icon: Scale },
+  { value: "Criminal", hi: "आपराधिक", icon: Shield },
+  { value: "Family", hi: "पारिवारिक", icon: Users },
+  { value: "Consumer", hi: "उपभोक्ता", icon: Briefcase },
+  { value: "Labour", hi: "श्रम", icon: Building },
+  { value: "Property", hi: "संपत्ति", icon: Home },
+];
+
 export default function NewMatterModal({
   open,
   onClose,
   onCreated,
 }: Props) {
+  const isHindi = i18n.language.startsWith("hi");
+
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
+
+  const [errors, setErrors] = useState({
+    clientId: "",
+    title: "",
+  });
 
   const [form, setForm] = useState({
     clientId: "",
@@ -30,8 +59,6 @@ export default function NewMatterModal({
     court: "",
     judgeName: "",
     status: "Active",
-
-    // NEW
     oppositePartyName: "",
     oppositePartyAddress: "",
   });
@@ -47,14 +74,33 @@ export default function NewMatterModal({
 
   if (!open) return null;
 
-  const update = (key: string, value: string) =>
+  const update = (key: keyof typeof form, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  const save = async () => {
-    if (!form.clientId || !form.title.trim()) {
-      alert("Client and Matter Title are required.");
-      return;
+  const validate = () => {
+    const next = { clientId: "", title: "" };
+    let valid = true;
+
+    if (!form.clientId) {
+      next.clientId = isHindi
+        ? "कृपया मुवक्किल चुनें।"
+        : "Please select a client.";
+      valid = false;
     }
+
+    if (!form.title.trim()) {
+      next.title = isHindi
+        ? "कृपया मामले का शीर्षक दर्ज करें।"
+        : "Please enter matter title.";
+      valid = false;
+    }
+
+    setErrors(next);
+    return valid;
+  };
+
+  const save = async () => {
+    if (!validate()) return;
 
     try {
       setLoading(true);
@@ -76,144 +122,279 @@ export default function NewMatterModal({
         oppositePartyName: "",
         oppositePartyAddress: "",
       });
+
+      setErrors({
+        clientId: "",
+        title: "",
+      });
     } catch (e) {
       console.error(e);
-      alert("Unable to create matter.");
+      alert(isHindi ? "मामला नहीं बनाया जा सका।" : "Unable to create matter.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b p-5">
-          <h2 className="text-xl font-semibold">New Matter</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/40 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-2xl bg-white shadow-2xl">
+        {/* Header */}
 
-          <button onClick={onClose}>
-            <X />
+        <div className="flex items-center justify-between border-b bg-white p-6">
+          <div>
+            <h2 className="text-2xl font-bold">
+              {isHindi ? "नया मामला" : "New Matter"}
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              {isHindi
+                ? "न्यायालय हेतु नया मामला दर्ज करें।"
+                : "Create a new court matter."}
+            </p>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="rounded-lg p-2 hover:bg-slate-100"
+          >
+            <X size={22} />
           </button>
         </div>
 
-        <div className="space-y-4 p-6">
-          <select
-            value={form.clientId}
-            onChange={(e) => update("clientId", e.target.value)}
-            className="w-full rounded-lg border p-3"
-          >
-            <option value="">Select Client</option>
+        {/* Scrollable Body */}
 
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.fullName}
-              </option>
-            ))}
-          </select>
+        <div className="flex-1 space-y-6 overflow-y-auto p-6">
+          {/* Client */}
 
-          <input
-            placeholder="Matter Title"
-            value={form.title}
-            onChange={(e) => update("title", e.target.value)}
-            className="w-full rounded-lg border p-3"
-          />
+          <div>
+            <label className="mb-2 block text-sm font-medium">
+              {isHindi ? "मुवक्किल *" : "Client *"}
+            </label>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <input
-              placeholder="Matter Number"
-              value={form.matterNumber}
-              onChange={(e) => update("matterNumber", e.target.value)}
-              className="rounded-lg border p-3"
-            />
+            <div className="flex items-center rounded-lg border border-slate-300 px-3">
+              <User className="text-slate-400" size={18} />
 
-            <input
-              placeholder="Case Number"
-              value={form.caseNumber}
-              onChange={(e) => update("caseNumber", e.target.value)}
-              className="rounded-lg border p-3"
-            />
+              <select
+                value={form.clientId}
+                onChange={(e) => update("clientId", e.target.value)}
+                className="w-full p-3 outline-none"
+              >
+                <option value="">
+                  {isHindi ? "मुवक्किल चुनें" : "Select Client"}
+                </option>
+
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.fullName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {errors.clientId && (
+              <p className="mt-1 text-sm text-red-600">{errors.clientId}</p>
+            )}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <select
-              value={form.matterType}
-              onChange={(e) => update("matterType", e.target.value)}
-              className="rounded-lg border p-3"
-            >
-              <option>Civil</option>
-              <option>Criminal</option>
-              <option>Family</option>
-              <option>Consumer</option>
-              <option>Labour</option>
-              <option>Property</option>
-            </select>
+          {/* Matter Title */}
 
-            <select
-              value={form.status}
-              onChange={(e) => update("status", e.target.value)}
-              className="rounded-lg border p-3"
-            >
-              <option>Active</option>
-              <option>Pending</option>
-              <option>Closed</option>
-            </select>
+          <div>
+            <label className="mb-2 block text-sm font-medium">
+              {isHindi ? "मामले का शीर्षक *" : "Matter Title *"}
+            </label>
+
+            <input
+              value={form.title}
+              onChange={(e) => update("title", e.target.value)}
+              placeholder={
+                isHindi
+                  ? "जैसे: राहुल बनाम मोहन"
+                  : "Example: Rahul vs Mohan"
+              }
+              className="w-full rounded-lg border border-slate-300 p-3"
+            />
+
+            {errors.title && (
+              <p className="mt-1 text-sm text-red-600">{errors.title}</p>
+            )}
           </div>
 
-          <input
-            placeholder="Court"
-            value={form.court}
-            onChange={(e) => update("court", e.target.value)}
-            className="w-full rounded-lg border p-3"
-          />
+          {/* Matter Types */}
 
-          <input
-            placeholder="Judge Name"
-            value={form.judgeName}
-            onChange={(e) => update("judgeName", e.target.value)}
-            className="w-full rounded-lg border p-3"
-          />
+          <div>
+            <label className="mb-3 block text-sm font-medium">
+              {isHindi ? "मामले का प्रकार" : "Matter Type"}
+            </label>
 
-          {/* NEW SECTION */}
+            <div className="grid gap-3 md:grid-cols-3">
+              {matterTypes.map((type) => {
+                const Icon = type.icon;
+                const active = form.matterType === type.value;
 
-          <div className="rounded-xl border bg-slate-50 p-4">
-            <h3 className="mb-3 font-semibold text-slate-800">
-              Opposite Party (Recipient)
+                return (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() => update("matterType", type.value)}
+                    className={`rounded-xl border p-4 text-left transition ${
+                      active
+                        ? "border-blue-600 bg-blue-50"
+                        : "border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Icon
+                      size={24}
+                      className={active ? "text-blue-600" : "text-slate-600"}
+                    />
+
+                    <p className="mt-2 font-medium">
+                      {isHindi ? type.hi : type.value}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Case + Court */}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium">
+                {isHindi ? "केस नंबर" : "Case Number"}
+              </label>
+
+              <input
+                value={form.caseNumber}
+                onChange={(e) => update("caseNumber", e.target.value)}
+                placeholder={isHindi ? "यदि उपलब्ध हो" : "If available"}
+                className="w-full rounded-lg border border-slate-300 p-3"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium">
+                {isHindi ? "न्यायालय" : "Court"}
+              </label>
+
+              <input
+                value={form.court}
+                onChange={(e) => update("court", e.target.value)}
+                placeholder={
+                  isHindi
+                    ? "जिला न्यायालय गाज़ियाबाद"
+                    : "District Court Ghaziabad"
+                }
+                className="w-full rounded-lg border border-slate-300 p-3"
+              />
+            </div>
+          </div>
+
+          {/* Judge */}
+
+          <div>
+            <label className="mb-2 block text-sm font-medium">
+              {isHindi ? "न्यायाधीश" : "Judge"}
+            </label>
+
+            <div className="flex items-center rounded-lg border border-slate-300 px-3">
+              <Gavel className="text-slate-400" size={18} />
+
+              <input
+                value={form.judgeName}
+                onChange={(e) => update("judgeName", e.target.value)}
+                placeholder={
+                  isHindi ? "न्यायाधीश का नाम" : "Judge Name"
+                }
+                className="w-full p-3 outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Opposite Party */}
+
+          <div className="rounded-xl border bg-slate-50 p-5">
+            <h3 className="mb-4 font-semibold text-slate-800">
+              {isHindi ? "विपक्षी पक्ष" : "Opposite Party"}
             </h3>
 
             <input
-              placeholder="Opposite Party Name"
               value={form.oppositePartyName}
               onChange={(e) =>
                 update("oppositePartyName", e.target.value)
               }
-              className="mb-3 w-full rounded-lg border p-3"
+              placeholder={
+                isHindi
+                  ? "विपक्षी पक्ष का नाम"
+                  : "Opposite Party Name"
+              }
+              className="mb-3 w-full rounded-lg border border-slate-300 p-3"
             />
 
             <textarea
               rows={3}
-              placeholder="Opposite Party Address"
               value={form.oppositePartyAddress}
               onChange={(e) =>
                 update("oppositePartyAddress", e.target.value)
               }
-              className="w-full rounded-lg border p-3"
+              placeholder={
+                isHindi
+                  ? "विपक्षी पक्ष का पता"
+                  : "Opposite Party Address"
+              }
+              className="w-full rounded-lg border border-slate-300 p-3"
             />
+          </div>
+
+          {/* Info */}
+
+          <div className="rounded-xl bg-blue-50 p-4">
+            <div className="flex items-center gap-2 text-blue-700">
+              <FileText size={18} />
+
+              <span className="font-medium">
+                {isHindi
+                  ? "मामला नंबर और स्थिति स्वतः निर्धारित होगी"
+                  : "Matter Number and Status are handled automatically"}
+              </span>
+            </div>
+
+            <p className="mt-1 text-sm text-blue-600">
+              {isHindi
+                ? "नया मामला 'सक्रिय' स्थिति के साथ बनाया जाएगा।"
+                : "New matters are created as Active by default."}
+            </p>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 border-t p-5">
+        {/* Sticky Footer */}
+
+        <div className="sticky bottom-0 flex justify-end gap-3 border-t bg-white p-6">
           <button
             onClick={onClose}
-            className="rounded-lg border px-5 py-2"
+            className="rounded-lg border px-5 py-3 hover:bg-slate-50"
           >
-            Cancel
+            {isHindi ? "रद्द करें" : "Cancel"}
           </button>
 
           <button
             onClick={save}
             disabled={loading}
-            className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700"
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading ? "Saving..." : "Create Matter"}
+            {loading ? (
+              <Loader2 className="animate-spin" size={18} />
+            ) : (
+              <Scale size={18} />
+            )}
+
+            {loading
+              ? isHindi
+                ? "बनाया जा रहा है..."
+                : "Creating..."
+              : isHindi
+                ? "मामला बनाएँ"
+                : "Create Matter"}
           </button>
         </div>
       </div>

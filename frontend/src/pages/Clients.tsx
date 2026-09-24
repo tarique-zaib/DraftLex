@@ -5,6 +5,7 @@ import api from "../api/client";
 import Sidebar from "../components/Sidebar";
 import UserMenu from "../components/UserMenu";
 import NewClientModal from "../components/NewClientModal";
+import i18n from "../i18n";
 
 interface Client {
   id: string;
@@ -58,9 +59,9 @@ export default function Clients() {
         <main className="flex-1 p-8">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Clients</h1>
+              <h1 className="text-3xl font-bold text-slate-900">{i18n.t("clientsPage")}</h1>
               <p className="text-slate-500">
-                Manage all your clients in one place.
+                {i18n.t("manageClientsSubtitle")}
               </p>
             </div>
 
@@ -70,7 +71,7 @@ export default function Clients() {
                 className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 font-medium text-white hover:bg-blue-700"
               >
                 <Plus size={18} />
-                New Client
+                {i18n.t("newClient")}
               </button>
 
               <UserMenu />
@@ -83,7 +84,7 @@ export default function Clients() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, code or mobile..."
+              placeholder={i18n.t("searchClients")}
               className="w-full outline-none"
             />
           </div>
@@ -92,10 +93,10 @@ export default function Clients() {
             <table className="w-full">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-4 text-left">Client</th>
-                  <th className="px-6 py-4 text-left">Code</th>
-                  <th className="px-6 py-4 text-left">Mobile</th>
-                  <th className="px-6 py-4 text-left">Action</th>
+                  <th className="px-6 py-4 text-left">{i18n.t("clientName")}</th>
+                  <th className="px-6 py-4 text-left">{i18n.t("clientCode")}</th>
+                  <th className="px-6 py-4 text-left">{i18n.t("mobile")}</th>
+                  <th className="px-6 py-4 text-left">{i18n.t("actions")}</th>
                 </tr>
               </thead>
 
@@ -103,7 +104,7 @@ export default function Clients() {
                 {loading ? (
                   <tr>
                     <td colSpan={4} className="py-10 text-center">
-                      Loading...
+                      {i18n.t("loading")}
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
@@ -112,7 +113,7 @@ export default function Clients() {
                       colSpan={4}
                       className="py-10 text-center text-slate-500"
                     >
-                      No clients found.
+                      {i18n.t("noClients")}
                     </td>
                   </tr>
                 ) : (
@@ -130,7 +131,7 @@ export default function Clients() {
                             </div>
 
                             <div className="text-sm text-slate-500">
-                              {client.email || "No email"}
+                              {client.email || i18n.t("noEmail")}
                             </div>
                           </div>
                         </div>
@@ -150,7 +151,7 @@ export default function Clients() {
                           to={`/clients/${client.id}`}
                           className="font-medium text-blue-600 hover:underline"
                         >
-                          View
+                          {i18n.t("view")}
                         </Link>
                       </td>
                     </tr>

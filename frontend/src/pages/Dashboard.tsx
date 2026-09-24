@@ -7,6 +7,7 @@ import UserMenu from "../components/UserMenu";
 import Sidebar from "../components/Sidebar";
 import LanguageToggle from "../components/LanguageToggle";
 import { useAuth } from "../context/AuthContext";
+import { legalText } from "../utils/legalTranslations";
 import i18n from "../i18n";
 import "../index.css";
 
@@ -182,7 +183,7 @@ export default function Dashboard() {
                       </div>
 
                       <span className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-700">
-                        {m.status}
+                        {legalText(m.status)}
                       </span>
                     </Link>
                   ))
@@ -209,20 +210,23 @@ export default function Dashboard() {
                     >
                       <div>
                         <p className="font-semibold text-slate-800">
-                          {h.stage}
+                          {legalText(h.stage)}
                         </p>
 
                         <p className="text-sm text-slate-500">
-                          {new Date(h.hearingDate).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                          {new Date(h.hearingDate).toLocaleDateString(
+                            i18n.language.startsWith("hi") ? "hi-IN" : "en-IN",
+                            {
+                              day: "2-digit",
+                              month: "long",
+                              year: "numeric",
+                            },
+                          )}
                         </p>
 
                         <p className="text-xs text-slate-400">
-                          {h.judgeName || i18n.t("judgeTBD")} •{" "}
-                          {h.courtRoom || i18n.t("courtTBD")}
+                          {legalText(h.judgeName || "Judge TBD")} •{" "}
+                          {legalText(h.courtRoom || "Court TBD")}
                         </p>
                       </div>
 

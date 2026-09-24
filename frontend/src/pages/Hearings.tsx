@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
-import { CalendarDays, Plus, Search, Gavel } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Search, CalendarDays, Gavel, Clock3, Plus } from "lucide-react";
 import api from "../api/client";
 import Sidebar from "../components/Sidebar";
 import UserMenu from "../components/UserMenu";
 import NewHearingModal from "../components/NewHearingModal";
+import i18n from "../i18n";
 import RescheduleHearingModal from "../components/RescheduleHearingModal";
 
 interface Hearing {
@@ -13,54 +14,35 @@ interface Hearing {
   judgeName?: string;
   courtRoom?: string;
   matter?: {
+    id: string;
     title: string;
     matterNumber: string;
+    court?: string;
   };
 }
 
-const getHearingStatus = (hearingDate: string) => {
-  const hearing = new Date(hearingDate);
-  const today = new Date();
-
-  hearing.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-
-  if (hearing.getTime() === today.getTime()) return "Today";
-  if (hearing > today) return "Upcoming";
-  return "Completed";
-};
-
 export default function Hearings() {
-  const [hearings, setHearings] = useState<Hearing[]>([]);
-  const [filtered, setFiltered] = useState<Hearing[]>([]);
-  const [search, setSearch] = useState("");
+  const [, setLang] = useState(i18n.language);
+
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [showNewHearing, setShowNewHearing] = useState(false);
+  const [hearings, setHearings] = useState<Hearing[]>([]);
   const [showReschedule, setShowReschedule] = useState(false);
   const [selectedHearing, setSelectedHearing] = useState<Hearing | null>(null);
 
   useEffect(() => {
-    loadHearings();
+    const onChange = (lng: string) => setLang(lng);
+
+    i18n.on("languageChanged", onChange);
+    return () => i18n.off("languageChanged", onChange);
   }, []);
-
-  useEffect(() => {
-    const term = search.toLowerCase();
-
-    setFiltered(
-      hearings.filter(
-        (h) =>
-          h.stage.toLowerCase().includes(term) ||
-          (h.matter?.title ?? "").toLowerCase().includes(term) ||
-          (h.judgeName ?? "").toLowerCase().includes(term),
-      ),
-    );
-  }, [search, hearings]);
 
   const loadHearings = async () => {
     try {
-      const { data } = await api.get<Hearing[]>("/Hearings");
+      setLoading(true);
+      const { data } = await api.get("/Hearings");
       setHearings(data);
-      setFiltered(data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -68,38 +50,49 @@ export default function Hearings() {
     }
   };
 
-  const todayCount = hearings.filter(
-    (h) => getHearingStatus(h.hearingDate) === "Today",
+  useEffect(() => {
+    loadHearings();
+  }, []);
+
+  const filtered = useMemo(() => {
+    const term = search.toLowerCase();
+
+    return hearings.filter(
+      (h) =>
+        h.matter?.title?.toLowerCase().includes(term) ||
+        h.matter?.matterNumber?.toLowerCase().includes(term) ||
+        h.stage.toLowerCase().includes(term) ||
+        h.judgeName?.toLowerCase().includes(term),
+    );
+  }, [hearings, search]);
+
+  const today = new Date().toDateString();
+
+  const todaysCount = filtered.filter(
+    (h) => new Date(h.hearingDate).toDateString() === today,
   ).length;
 
-  const upcomingCount = hearings.filter(
-    (h) => getHearingStatus(h.hearingDate) === "Upcoming",
+  const upcomingCount = filtered.filter(
+    (h) => new Date(h.hearingDate) > new Date(),
   ).length;
 
-  const completedCount = hearings.filter(
-    (h) => getHearingStatus(h.hearingDate) === "Completed",
+  const completedCount = filtered.filter(
+    (h) => new Date(h.hearingDate) < new Date(),
   ).length;
 
-  const groupedHearings = filtered.reduce(
+  const grouped = filtered.reduce(
     (acc, hearing) => {
-      const status = getHearingStatus(hearing.hearingDate);
+      const key =
+        hearing.courtRoom ||
+        hearing.matter?.court ||
+        (i18n.language.startsWith("hi")
+          ? "न्यायालय आवंटित नहीं"
+          : "Court Not Assigned");
 
-      const court = hearing.courtRoom || "Court Not Assigned";
-
-      if (!acc[status]) acc[status] = {};
-
-      if (!acc[status][court]) acc[status][court] = [];
-
-      acc[status][court].push(hearing);
-
-      acc[status][court].sort(
-        (a, b) =>
-          new Date(a.hearingDate).getTime() - new Date(b.hearingDate).getTime(),
-      );
-
+      acc[key] = [...(acc[key] || []), hearing];
       return acc;
     },
-    {} as Record<string, Record<string, Hearing[]>>,
+    {} as Record<string, Hearing[]>,
   );
 
   return (
@@ -110,9 +103,14 @@ export default function Hearings() {
         <main className="flex-1 p-8">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Hearings</h1>
+              <h1 className="text-3xl font-bold text-slate-900">
+                {i18n.language.startsWith("hi") ? "सुनवाई" : "Hearings"}
+              </h1>
+
               <p className="text-slate-500">
-                Track upcoming court hearings and stages.
+                {i18n.language.startsWith("hi")
+                  ? "आगामी न्यायालय सुनवाई और चरणों का प्रबंधन करें।"
+                  : "Track upcoming court hearings and stages."}
               </p>
             </div>
 
@@ -122,163 +120,182 @@ export default function Hearings() {
                 className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 font-medium text-white hover:bg-blue-700"
               >
                 <Plus size={18} />
-                New Hearing
+                {i18n.language.startsWith("hi") ? "नई सुनवाई" : "New Hearing"}
               </button>
 
               <UserMenu />
             </div>
           </div>
+
           <div className="mb-6 grid gap-4 md:grid-cols-3">
-            <div className="rounded-xl border border-red-200 bg-red-50 p-5">
-              <p className="text-sm text-red-700">Today's Hearings</p>
-              <h2 className="mt-1 text-3xl font-bold text-red-700">
-                {todayCount}
+            <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+              <p className="text-red-600">
+                {i18n.language.startsWith("hi")
+                  ? "आज की सुनवाई"
+                  : "Today's Hearings"}
+              </p>
+              <h2 className="mt-2 text-4xl font-bold text-red-700">
+                {todaysCount}
               </h2>
             </div>
 
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
-              <p className="text-sm text-blue-700">Upcoming</p>
-              <h2 className="mt-1 text-3xl font-bold text-blue-700">
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-6">
+              <p className="text-blue-600">
+                {i18n.language.startsWith("hi") ? "आगामी" : "Upcoming"}
+              </p>
+              <h2 className="mt-2 text-4xl font-bold text-blue-700">
                 {upcomingCount}
               </h2>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-100 p-5">
-              <p className="text-sm text-slate-700">Completed</p>
-              <h2 className="mt-1 text-3xl font-bold text-slate-700">
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
+              <p className="text-slate-600">
+                {i18n.language.startsWith("hi") ? "पूर्ण" : "Completed"}
+              </p>
+              <h2 className="mt-2 text-4xl font-bold text-slate-800">
                 {completedCount}
               </h2>
             </div>
           </div>
-          <div className="mb-6 flex items-center gap-3 rounded-xl bg-white p-4 shadow-sm">
+
+          <div className="mb-8 flex items-center gap-3 rounded-xl bg-white p-4 shadow-sm">
             <Search className="text-slate-400" size={20} />
 
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search hearings..."
+              placeholder={
+                i18n.language.startsWith("hi")
+                  ? "सुनवाई खोजें..."
+                  : "Search hearings..."
+              }
               className="w-full outline-none"
             />
           </div>
 
-          <div className="space-y-8">
-            {loading ? (
-              <div className="rounded-xl bg-white p-10 text-center">
-                Loading hearings...
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="rounded-xl bg-white p-10 text-center text-slate-500">
-                No hearings found.
-              </div>
-            ) : (
-              ["Today", "Upcoming", "Completed"].map((section) => {
-                const courts = groupedHearings[section];
+          <h2 className="mb-4 text-2xl font-bold text-slate-900">
+            {i18n.language.startsWith("hi")
+              ? "आगामी सुनवाई"
+              : "Upcoming Hearings"}
+          </h2>
 
-                if (!courts) return null;
+          {loading ? (
+            <div className="rounded-xl bg-white p-10 text-center">
+              {i18n.language.startsWith("hi")
+                ? "लोड हो रहा है..."
+                : "Loading..."}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {Object.entries(grouped).map(([court, list]) => (
+                <div
+                  key={court}
+                  className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+                >
+                  <div className="border-b bg-slate-50 px-6 py-4 font-semibold">
+                    {court}
+                  </div>
 
-                return (
-                  <div key={section}>
-                    <h2 className="mb-4 text-2xl font-bold text-slate-900">
-                      {section === "Today"
-                        ? "Today's Cause List"
-                        : `${section} Hearings`}
-                    </h2>
+                  {list.map((hearing) => (
+                    <div
+                      key={hearing.id}
+                      className="flex items-center justify-between border-b last:border-b-0 p-6"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="rounded-xl bg-blue-100 p-4 text-blue-600">
+                          <Gavel size={24} />
+                        </div>
 
-                    <div className="space-y-6">
-                      {Object.entries(courts).map(([court, items]) => (
-                        <div
-                          key={court}
-                          className="rounded-xl border bg-white shadow-sm"
-                        >
-                          <div className="border-b bg-slate-50 px-5 py-3">
-                            <h3 className="font-semibold">{court}</h3>
+                        <div>
+                          <h3 className="text-xl font-semibold">
+                            {hearing.matter?.title ||
+                              (i18n.language.startsWith("hi")
+                                ? "अज्ञात मामला"
+                                : "Unknown Matter")}
+                          </h3>
+
+                          <p className="text-slate-500">{hearing.stage}</p>
+
+                          <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-600">
+                            <div className="flex items-center gap-1">
+                              <CalendarDays size={16} />
+                              {new Date(hearing.hearingDate).toLocaleDateString(
+                                i18n.language.startsWith("hi")
+                                  ? "hi-IN"
+                                  : "en-IN",
+                                {
+                                  day: "numeric",
+                                  month: "long",
+                                  year: "numeric",
+                                },
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <Clock3 size={16} />
+                              {new Date(hearing.hearingDate).toLocaleTimeString(
+                                [],
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </div>
                           </div>
 
-                          <div className="divide-y">
-                            {items.map((hearing) => {
-                              const status = getHearingStatus(
-                                hearing.hearingDate,
-                              );
-
-                              return (
-                                <div
-                                  key={hearing.id}
-                                  className="flex items-center justify-between px-5 py-4 hover:bg-slate-50"
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <div className="rounded-lg bg-blue-100 p-3 text-blue-700">
-                                      <Gavel size={20} />
-                                    </div>
-
-                                    <div>
-                                      <p className="font-semibold">
-                                        {hearing.matter?.title ||
-                                          "Unknown Matter"}
-                                      </p>
-
-                                      <p className="text-sm text-slate-500">
-                                        {hearing.stage}
-                                      </p>
-
-                                      <p className="text-sm text-slate-500">
-                                        {new Date(
-                                          hearing.hearingDate,
-                                        ).toLocaleTimeString("en-IN", {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-3">
-                                    <span
-                                      className={`rounded-full px-3 py-1 text-sm ${
-                                        status === "Today"
-                                          ? "bg-red-100 text-red-700"
-                                          : status === "Upcoming"
-                                            ? "bg-blue-100 text-blue-700"
-                                            : "bg-slate-200 text-slate-700"
-                                      }`}
-                                    >
-                                      {status}
-                                    </span>
-
-                                    <button
-                                      onClick={() => {
-                                        setSelectedHearing(hearing);
-                                        setShowReschedule(true);
-                                      }}
-                                      className="rounded-lg border px-3 py-1 text-sm hover:bg-slate-50"
-                                    >
-                                      Reschedule
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                          <div className="mt-2 flex items-center gap-1 text-sm text-slate-500">
+                            <Gavel size={16} />
+                            {hearing.judgeName ||
+                              (i18n.language.startsWith("hi")
+                                ? "न्यायाधीश निर्धारित नहीं"
+                                : "Judge TBD")}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                      </div>
 
-            <NewHearingModal
-              open={showNewHearing}
-              onClose={() => setShowNewHearing(false)}
-              onCreated={loadHearings}
-            />
-            <RescheduleHearingModal
-              open={showReschedule}
-              hearingId={selectedHearing?.id ?? null}
-              currentDate={selectedHearing?.hearingDate ?? ""}
-              onClose={() => setShowReschedule(false)}
-              onUpdated={loadHearings}
-            />
-          </div>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700">
+                          {new Date(hearing.hearingDate) > new Date()
+                            ? i18n.language.startsWith("hi")
+                              ? "आगामी"
+                              : "Upcoming"
+                            : i18n.language.startsWith("hi")
+                              ? "पूर्ण"
+                              : "Completed"}
+                        </span>
+
+                        {/* FIXED BUTTON */}
+                        <button
+                          onClick={() => {
+                            setSelectedHearing(hearing);
+                            setShowReschedule(true);
+                          }}
+                          className="rounded-lg border border-slate-300 px-4 py-2 hover:bg-slate-50"
+                        >
+                          {i18n.language.startsWith("hi")
+                            ? "पुनर्निर्धारित करें"
+                            : "Reschedule"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <NewHearingModal
+            open={showNewHearing}
+            onClose={() => setShowNewHearing(false)}
+            onCreated={loadHearings}
+          />
+          <RescheduleHearingModal
+            open={showReschedule}
+            hearingId={selectedHearing?.id ?? null}
+            currentDate={selectedHearing?.hearingDate ?? ""}
+            onClose={() => setShowReschedule(false)}
+            onUpdated={loadHearings}
+          />
         </main>
       </div>
     </div>

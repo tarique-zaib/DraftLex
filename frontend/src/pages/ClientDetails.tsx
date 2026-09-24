@@ -1,3 +1,4 @@
+import i18n from "../i18n";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
@@ -162,7 +163,7 @@ export default function ClientDetails() {
             onClick={() => navigate("/clients")}
             className="rounded-lg bg-blue-600 px-4 py-2 text-white"
           >
-            Back to Clients
+            {i18n.t("back")}
           </button>
         </div>
       </div>
@@ -191,7 +192,7 @@ export default function ClientDetails() {
               </h1>
 
               <p className="mt-1 text-slate-500">
-                {client.clientCode} • Client Profile
+                {client.clientCode} • {i18n.t("clientProfile")}
               </p>
             </div>
 
@@ -200,7 +201,7 @@ export default function ClientDetails() {
                 onClick={() => setShowEdit(true)}
                 className="rounded-lg border px-4 py-2 hover:bg-slate-50"
               >
-                Edit Client
+                {i18n.t("editClient")}
               </button>
 
               <UserMenu />
@@ -211,11 +212,11 @@ export default function ClientDetails() {
           <div className="mb-6 rounded-xl border bg-white p-2 shadow-sm">
             <div className="flex gap-2 overflow-x-auto">
               {[
-                ["overview", "Overview"],
-                ["matters", "Matters"],
-                ["hearings", "Hearings"],
-                ["documents", "Documents"],
-                ["timeline", "Timeline"],
+                ["overview", i18n.t("overview")],
+                ["matters", i18n.t("matters")],
+                ["hearings", i18n.t("hearings")],
+                ["documents", i18n.t("documents")],
+                ["timeline", i18n.t("timeline")],
               ].map(([key, label]) => (
                 <button
                   key={key}
@@ -237,7 +238,7 @@ export default function ClientDetails() {
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 rounded-xl border bg-white p-6 shadow-sm">
                 <h2 className="mb-5 text-xl font-semibold">
-                  Contact Information
+                  {i18n.t("contactInformation")}
                 </h2>
 
                 <div className="space-y-4">
@@ -260,13 +261,15 @@ export default function ClientDetails() {
                 <div className="mt-8">
                   <h3 className="mb-3 text-lg font-semibold">Notes</h3>
                   <div className="rounded-lg border bg-slate-50 p-4">
-                    {client.notes || "No notes added."}
+                    {client.notes || i18n.t("noNotes")}
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl border bg-white p-6 shadow-sm">
-                <h2 className="mb-5 text-xl font-semibold">Quick Actions</h2>
+                <h2 className="mb-5 text-xl font-semibold">
+                  {i18n.t("quickActions")}
+                </h2>
 
                 <div className="space-y-3">
                   <Link
@@ -274,7 +277,7 @@ export default function ClientDetails() {
                     className="flex items-center gap-3 rounded-lg border p-3 hover:bg-slate-50"
                   >
                     <Scale size={20} />
-                    New Matter
+                    {i18n.t("newMatter")}
                   </Link>
 
                   <Link
@@ -282,7 +285,7 @@ export default function ClientDetails() {
                     className="flex items-center gap-3 rounded-lg border p-3 hover:bg-slate-50"
                   >
                     <CalendarDays size={20} />
-                    Schedule Hearing
+                    {i18n.t("scheduleHearing")}
                   </Link>
 
                   <Link
@@ -290,7 +293,7 @@ export default function ClientDetails() {
                     className="flex items-center gap-3 rounded-lg border p-3 hover:bg-slate-50"
                   >
                     <FileText size={20} />
-                    Generate Draft
+                    {i18n.t("generateDraft")}
                   </Link>
                 </div>
               </div>
@@ -300,16 +303,18 @@ export default function ClientDetails() {
           {/* Matters */}
           {activeTab === "matters" && (
             <div className="rounded-xl border bg-white p-6 shadow-sm">
-              <h2 className="mb-4 text-xl font-semibold">Client Matters</h2>
+              <h2 className="mb-4 text-xl font-semibold">
+                <h3>{i18n.t("clientMatters")}</h3>
+              </h2>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="border-b">
                     <tr className="text-left">
-                      <th className="py-3">Matter No</th>
-                      <th className="py-3">Title</th>
-                      <th className="py-3">Court</th>
-                      <th className="py-3">Status</th>
-                      <th className="py-3"></th>
+                      <th className="py-3">{i18n.t("matterNo")}</th>
+                      <th className="py-3">{i18n.t("title")}</th>
+                      <th className="py-3">{i18n.t("court")}</th>
+                      <th className="py-3">{i18n.t("status")}</th>
+                      <th className="py-3">{i18n.t("actions")}</th>
                     </tr>
                   </thead>
 
@@ -359,13 +364,15 @@ export default function ClientDetails() {
           {activeTab === "hearings" && (
             <div className="rounded-xl border bg-white p-6 shadow-sm">
               <div className="mb-5 flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Client Hearings</h2>
+                <h2 className="text-xl font-semibold">
+                  {i18n.t("clientHearings")}
+                </h2>
 
                 <Link
                   to="/hearings"
                   className="rounded-lg bg-blue-600 px-4 py-2 text-white"
                 >
-                  + Schedule Hearing
+                  + {i18n.t("scheduleHearing")}
                 </Link>
               </div>
 
@@ -397,7 +404,17 @@ export default function ClientDetails() {
                         <div>
                           <p className="font-semibold">{h.matterTitle}</p>
 
-                          <p className="text-sm text-slate-500">{h.stage}</p>
+                          <p className="text-sm text-slate-500">
+                            {h.stage === "First Hearing"
+                              ? i18n.t("firstHearing")
+                              : h.stage === "Evidence"
+                                ? i18n.t("evidence")
+                                : h.stage === "Arguments"
+                                  ? i18n.t("arguments")
+                                  : h.stage === "Cross Examination"
+                                    ? i18n.t("crossExamination")
+                                    : i18n.t("finalOrder")}
+                          </p>
 
                           <p className="text-sm text-slate-500">
                             {date.toLocaleDateString("en-IN", {
@@ -422,10 +439,10 @@ export default function ClientDetails() {
                           }`}
                         >
                           {isToday
-                            ? "Today"
+                            ? i18n.t("today")
                             : isPast
-                              ? "Completed"
-                              : "Upcoming"}
+                              ? i18n.t("completed")
+                              : i18n.t("upcoming")}
                         </span>
                       </div>
                     );
@@ -439,35 +456,37 @@ export default function ClientDetails() {
           {activeTab === "documents" && (
             <div className="rounded-xl border bg-white p-6 shadow-sm">
               <div className="mb-5 flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Client Documents</h2>
+                <h2 className="text-xl font-semibold">
+                  {i18n.t("clientDocuments")}
+                </h2>
 
                 <Link
                   to="/ai-drafts"
                   className="rounded-lg bg-blue-600 px-4 py-2 text-white"
                 >
-                  + Generate Draft
+                  + {i18n.t("generateDraft")}
                 </Link>
               </div>
 
               {loadingDocuments ? (
                 <div className="py-8 text-center text-slate-500">
-                  Loading documents...
+                  {i18n.t("loadingDocuments")}
                 </div>
               ) : documents.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center text-slate-500">
-                  No documents found.
+                  {i18n.t("noDocuments")}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="border-b bg-slate-50">
                       <tr className="text-left">
-                        <th className="px-3 py-3">Document</th>
-                        <th className="px-3 py-3">Matter</th>
-                        <th className="px-3 py-3">Type</th>
-                        <th className="px-3 py-3">Version</th>
-                        <th className="px-3 py-3">Updated</th>
-                        <th className="px-3 py-3">Action</th>
+                        <th className="px-3 py-3">{i18n.t("document")}</th>
+                        <th className="px-3 py-3">{i18n.t("matter")}</th>
+                        <th className="px-3 py-3">{i18n.t("type")}</th>
+                        <th className="px-3 py-3">{i18n.t("version")}</th>
+                        <th className="px-3 py-3">{i18n.t("updated")}</th>
+                        <th className="px-3 py-3">{i18n.t("actions")}</th>
                       </tr>
                     </thead>
 
@@ -488,7 +507,7 @@ export default function ClientDetails() {
                               to={`/documents/${doc.id}`}
                               className="text-blue-600 hover:underline"
                             >
-                              Open
+                              {i18n.t("open")}
                             </Link>
                           </td>
                         </tr>
@@ -503,47 +522,76 @@ export default function ClientDetails() {
           {/* Timeline */}
           {activeTab === "timeline" && (
             <div className="rounded-xl border bg-white p-6 shadow-sm">
-              <h2 className="mb-5 text-xl font-semibold">Activity Timeline</h2>
+              <h2 className="mb-5 text-xl font-semibold">
+                {i18n.t("activityTimeline")}
+              </h2>
 
               {loadingTimeline ? (
                 <div className="py-8 text-center text-slate-500">
-                  Loading timeline...
+                  {i18n.t("loadingTimeline")}
                 </div>
               ) : timeline.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-8 text-center text-slate-500">
-                  No activity found.
+                  {i18n.t("noActivityFound")}
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {timeline.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex gap-4 rounded-lg border p-4"
-                    >
-                      <div className="mt-1 h-3 w-3 rounded-full bg-blue-600"></div>
+                  {timeline.map((item, index) => {
+                    const translatedTitle =
+                      item.title === "Hearing Scheduled"
+                        ? i18n.t("hearingScheduled")
+                        : item.title === "Document Generated"
+                          ? i18n.t("documentGenerated")
+                          : item.title;
 
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold">{item.title}</h3>
-                          <span className="text-sm text-slate-500">
-                            {new Date(item.date).toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
+                    const translatedDescription = item.description
+                      .replace("First Hearing", i18n.t("firstHearing"))
+                      .replace("Evidence", i18n.t("evidence"))
+                      .replace("Arguments", i18n.t("arguments"))
+                      .replace("Cross Examination", i18n.t("crossExamination"))
+                      .replace("Final Order", i18n.t("finalOrder"));
+
+                    const translatedType =
+                      item.type === "Hearing"
+                        ? i18n.t("hearing")
+                        : item.type === "Document"
+                          ? i18n.t("document")
+                          : item.type;
+
+                    return (
+                      <div
+                        key={index}
+                        className="flex gap-4 rounded-lg border border-slate-200 bg-white p-4"
+                      >
+                        <div className="mt-1 h-3 w-3 rounded-full bg-blue-600"></div>
+
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold">{translatedTitle}</h3>
+
+                            <span className="text-sm text-slate-500">
+                              {new Date(item.date).toLocaleDateString(
+                                i18n.language === "hi" ? "hi-IN" : "en-IN",
+                                {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                },
+                              )}
+                            </span>
+                          </div>
+
+                          <p className="mt-1 text-slate-600">
+                            {translatedDescription}
+                          </p>
+
+                          <span className="mt-2 inline-block rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
+                            {translatedType}
                           </span>
                         </div>
-
-                        <p className="mt-1 text-slate-600">
-                          {item.description}
-                        </p>
-
-                        <span className="mt-2 inline-block rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-                          {item.type}
-                        </span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
