@@ -112,5 +112,23 @@
   "keyFacts": "Key Facts",
   "riskLevel": "Risk Level",
   "nextRecommendedAction": "Next Recommended Action",
-  "regenerate": "Regenerate"
+  "regenerate": "Regenerate",
+
+  
+
+  "todaysCauseList": "Today's Cause List",
+  
+  "noHearingsToday": "No hearings today.",
+  
+  "stage": "Stage",
+
+  
+  "newDocument": "New Document",
+  "calendar": "Calendar",
+
+  "tomorrow": "Tomorrow",
+  "days": "Days",
+  "startsIn": "Starts in",
+  "inProgress": "In Progress"
+  
 }

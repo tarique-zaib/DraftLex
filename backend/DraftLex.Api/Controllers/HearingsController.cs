@@ -132,4 +132,65 @@ public class HearingsController : ControllerBase
 
         return Ok(hearing);
     }
+
+    [HttpGet("dashboard")]
+    public async Task<ActionResult<DashboardResponse>> Dashboard()
+    {
+        var today = DateTime.UtcNow.Date;
+        var nextWeek = today.AddDays(7);
+
+        var todayHearings = await _db.Hearings
+            .Where(h =>
+                h.Matter.AdvocateId == _currentUser.UserId &&
+                h.HearingDate.Date == today)
+            .Include(h => h.Matter)
+                .ThenInclude(m => m.Client)
+            .OrderBy(h => h.HearingDate)
+            .Select(h => new DashboardHearingDto
+            {
+                Id = h.Id,
+                MatterId = h.MatterId,
+                MatterTitle = h.Matter.Title,
+                ClientName = h.Matter.Client.FullName,
+                Court = h.Matter.Court,
+                HearingDate = h.HearingDate,
+                Stage = h.Stage
+            })
+            .ToListAsync();
+
+        var upcoming = await _db.Hearings
+            .Where(h =>
+                h.Matter.AdvocateId == _currentUser.UserId &&
+                h.HearingDate.Date > today &&
+                h.HearingDate.Date <= nextWeek)
+            .Include(h => h.Matter)
+                .ThenInclude(m => m.Client)
+            .OrderBy(h => h.HearingDate)
+            .Select(h => new DashboardHearingDto
+            {
+                Id = h.Id,
+                MatterId = h.MatterId,
+                MatterTitle = h.Matter.Title,
+                ClientName = h.Matter.Client.FullName,
+                Court = h.Matter.Court,
+                HearingDate = h.HearingDate,
+                Stage = h.Stage
+            })
+            .ToListAsync();
+
+        var response = new DashboardResponse
+        {
+            Today = todayHearings,
+            Upcoming = upcoming,
+            Stats = new DashboardStatsDto
+            {
+                Clients = await _db.Clients.CountAsync(c => c.AdvocateId == _currentUser.UserId),
+                ActiveMatters = await _db.Matters.CountAsync(m => m.AdvocateId == _currentUser.UserId && m.Status == "Active"),
+                Hearings = await _db.Hearings.CountAsync(h => h.Matter.AdvocateId == _currentUser.UserId),
+                Documents = await _db.LegalDocuments.CountAsync(d => d.Matter.AdvocateId == _currentUser.UserId)
+            }
+        };
+
+        return Ok(response);
+    }
 }

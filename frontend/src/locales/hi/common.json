@@ -134,5 +134,16 @@
   "keyFacts": "मुख्य तथ्य",
   "riskLevel": "जोखिम स्तर",
   "nextRecommendedAction": "अगला कदम",
-  "regenerate": "पुनः तैयार करें"
+  "regenerate": "पुनः तैयार करें",
+  
+  "todaysCauseList": "आज की कॉज़ लिस्ट",  
+  "noHearingsToday": "आज कोई सुनवाई नहीं है",  
+  "stage": "चरण",  
+  "newDocument": "नया दस्तावेज़",
+  "calendar": "कैलेंडर",
+  "tomorrow": "कल",
+  "days": "दिन",
+  "startsIn": "शुरू होने में",
+  "inProgress": "सुनवाई जारी है"  
 }
+
