@@ -1,7 +1,5 @@
-﻿using System.Linq;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using DraftLex.Application.Common.AI;
-using DraftLex.Application.Features.Documents;
 using DraftLex.Application.Features.Documents.DTOs;
 using DraftLex.Application.Interfaces;
 using DraftLex.Domain.Entities;
@@ -13,24 +11,30 @@ public class LegalDocumentService
     private readonly ILegalDocumentRepository _repo;
     private readonly IDraftLexDbContext _db;
     private readonly IAILegalDraftService _ai;
+    private readonly ICurrentUserService _currentUser;
 
     public LegalDocumentService(
         ILegalDocumentRepository repo,
         IDraftLexDbContext db,
-        IAILegalDraftService ai)
+        IAILegalDraftService ai,
+        ICurrentUserService currentUser)
     {
         _repo = repo;
         _db = db;
         _ai = ai;
+        _currentUser = currentUser;
     }
 
     // Create Document
     public async Task<DocumentResponse> CreateAsync(CreateDocumentRequest request)
     {
-        var matterExists = await _db.Matters.FindAsync(request.MatterId);
+        var matter = await _db.Matters
+            .FirstOrDefaultAsync(m =>
+                m.Id == request.MatterId &&
+                m.AdvocateId == _currentUser.UserId);
 
-        if (matterExists == null)
-            throw new ArgumentException("Matter not found.");
+        if (matter == null)
+            throw new UnauthorizedAccessException("Matter not found.");
 
         var document = new LegalDocument
         {
@@ -54,7 +58,11 @@ public class LegalDocumentService
     // Get Document
     public async Task<DocumentResponse?> GetByIdAsync(Guid id)
     {
-        var document = await _repo.GetByIdAsync(id);
+        var document = await _db.LegalDocuments
+            .Include(d => d.Matter)
+            .FirstOrDefaultAsync(d =>
+                d.Id == id &&
+                d.Matter.AdvocateId == _currentUser.UserId);
 
         return document == null ? null : Map(document);
     }
@@ -62,15 +70,38 @@ public class LegalDocumentService
     // Get Documents for Matter
     public async Task<List<DocumentResponse>> GetByMatterAsync(Guid matterId)
     {
-        var documents = await _repo.GetByMatterIdAsync(matterId);
+        var ownsMatter = await _db.Matters.AnyAsync(m =>
+            m.Id == matterId &&
+            m.AdvocateId == _currentUser.UserId);
 
-        return documents.Select(Map).ToList();
+        if (!ownsMatter)
+            return [];
+
+        return await _db.LegalDocuments
+            .Where(d => d.MatterId == matterId)
+            .OrderByDescending(d => d.UpdatedAt)
+            .Select(d => new DocumentResponse
+            {
+                Id = d.Id,
+                MatterId = d.MatterId,
+                Title = d.Title,
+                DocumentType = d.DocumentType,
+                Content = d.Content,
+                Version = d.Version,
+                Status = d.Status,
+                UpdatedAt = d.UpdatedAt
+            })
+            .ToListAsync();
     }
 
     // Update Document
     public async Task<bool> UpdateAsync(Guid id, UpdateDocumentRequest request)
     {
-        var document = await _repo.GetByIdAsync(id);
+        var document = await _db.LegalDocuments
+            .Include(d => d.Matter)
+            .FirstOrDefaultAsync(d =>
+                d.Id == id &&
+                d.Matter.AdvocateId == _currentUser.UserId);
 
         if (document == null)
             return false;
@@ -88,14 +119,19 @@ public class LegalDocumentService
     }
 
     // Generate AI Document
-    public async Task<DocumentResponse> GenerateAsync(GenerateDocumentRequest request, string advocateName)
+    public async Task<DocumentResponse> GenerateAsync(
+        GenerateDocumentRequest request,
+        string advocateName)
     {
         var matter = await _db.Matters
             .Include(m => m.Client)
-            .FirstOrDefaultAsync(m => m.Id == request.MatterId);
+            .Include(m => m.Hearings)
+            .FirstOrDefaultAsync(m =>
+                m.Id == request.MatterId &&
+                m.AdvocateId == _currentUser.UserId);
 
         if (matter == null)
-            throw new Exception("Matter not found.");
+            throw new UnauthorizedAccessException("Matter not found.");
 
         var generatedContent = await _ai.GenerateLegalDraftAsync(
             request.DocumentType,
@@ -122,24 +158,27 @@ public class LegalDocumentService
         _db.LegalDocuments.Add(document);
         await _db.SaveChangesAsync();
 
-        return new DocumentResponse
-        {
-            Id = document.Id,
-            MatterId = document.MatterId,
-            Title = document.Title,
-            DocumentType = document.DocumentType,
-            Content = document.Content,
-            Status = document.Status,
-            Version = document.Version
-        };
+        return Map(document);
     }
 
     // Get All Documents
     public async Task<List<DocumentResponse>> GetAllAsync()
     {
-        var documents = await _repo.GetAllAsync();
-
-        return documents.Select(Map).ToList();
+        return await _db.LegalDocuments
+            .Where(d => d.Matter.AdvocateId == _currentUser.UserId)
+            .OrderByDescending(d => d.UpdatedAt)
+            .Select(d => new DocumentResponse
+            {
+                Id = d.Id,
+                MatterId = d.MatterId,
+                Title = d.Title,
+                DocumentType = d.DocumentType,
+                Content = d.Content,
+                Version = d.Version,
+                Status = d.Status,
+                UpdatedAt = d.UpdatedAt
+            })
+            .ToListAsync();
     }
 
     private static DocumentResponse Map(LegalDocument document)

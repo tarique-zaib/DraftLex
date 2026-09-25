@@ -2,6 +2,9 @@
 
 public class Matter
 {
+
+    public Guid AdvocateId { get; set; }
+
     public Guid Id { get; set; }
 
     

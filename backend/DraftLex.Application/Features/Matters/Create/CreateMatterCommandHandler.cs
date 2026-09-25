@@ -8,10 +8,13 @@ namespace DraftLex.Application.Features.Matters.Create;
 public class CreateMatterCommandHandler : IRequestHandler<CreateMatterCommand, Guid>
 {
     private readonly IDraftLexDbContext _db;
+    private readonly ICurrentUserService _currentUser;
 
-    public CreateMatterCommandHandler(IDraftLexDbContext db)
+
+    public CreateMatterCommandHandler(IDraftLexDbContext db, ICurrentUserService currentUser)
     {
         _db = db;
+        _currentUser = currentUser;
     }
 
     public async Task<Guid> Handle(CreateMatterCommand request, CancellationToken cancellationToken)
@@ -40,7 +43,8 @@ public class CreateMatterCommandHandler : IRequestHandler<CreateMatterCommand, G
             OppositePartyAddress = request.OppositePartyAddress,
 
             Status = "Active",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            AdvocateId = _currentUser.UserId
         };
 
         _db.Matters.Add(matter);

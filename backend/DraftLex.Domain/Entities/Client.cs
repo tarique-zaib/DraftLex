@@ -2,6 +2,9 @@
 
 public class Client
 {
+
+    public Guid AdvocateId { get; set; }
+
     public Guid Id { get; set; }
 
     // Nullable until authentication is wired in

@@ -1,38 +1,60 @@
 ﻿using DraftLex.Application.DTOs.Hearings;
 using DraftLex.Application.Features.Hearings.Create;
 using DraftLex.Application.Features.Hearings.GetByMatter;
+using DraftLex.Application.Features.Hearings.GetById;
 using DraftLex.Application.Interfaces;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using DraftLex.Application.Features.Hearings.GetById;
+
 namespace DraftLex.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class HearingsController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IDraftLexDbContext _db;
+    private readonly ICurrentUserService _currentUser;
 
-
-    public HearingsController(IMediator mediator, IDraftLexDbContext db)
+    public HearingsController(
+        IMediator mediator,
+        IDraftLexDbContext db,
+        ICurrentUserService currentUser)
     {
         _mediator = mediator;
         _db = db;
+        _currentUser = currentUser;
     }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateHearingCommand command)
     {
+        // Ownership is enforced through Matter ownership.
+        var ownsMatter = await _db.Matters.AnyAsync(m =>
+            m.Id == command.MatterId &&
+            m.AdvocateId == _currentUser.UserId);
+
+        if (!ownsMatter)
+            return NotFound();
+
         var id = await _mediator.Send(command);
 
         return Created($"/api/hearings/{id}", new { id });
     }
 
-    [HttpGet("matter/{matterId}")]
+    [HttpGet("matter/{matterId:guid}")]
     public async Task<IActionResult> GetByMatter(Guid matterId)
     {
+        var ownsMatter = await _db.Matters.AnyAsync(m =>
+            m.Id == matterId &&
+            m.AdvocateId == _currentUser.UserId);
+
+        if (!ownsMatter)
+            return NotFound();
+
         var hearings = await _mediator.Send(new GetHearingsByMatterQuery(matterId));
 
         return Ok(hearings);
@@ -41,9 +63,11 @@ public class HearingsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
+        // P1 FIX: Only current advocate's hearings.
         var hearings = await _db.Hearings
+            .Where(h => h.Matter.AdvocateId == _currentUser.UserId)
             .Include(h => h.Matter)
-            .ThenInclude(m => m.Client)
+                .ThenInclude(m => m.Client)
             .OrderBy(h => h.HearingDate)
             .Select(h => new
             {
@@ -64,12 +88,17 @@ public class HearingsController : ControllerBase
 
     [HttpPut("{id:guid}/reschedule")]
     public async Task<IActionResult> Reschedule(
-    Guid id,
-    [FromBody] RescheduleHearingRequest request,
-    CancellationToken cancellationToken)
+        Guid id,
+        [FromBody] RescheduleHearingRequest request,
+        CancellationToken cancellationToken)
     {
+        // P1 FIX: Only owner can reschedule.
         var hearing = await _db.Hearings
-            .FirstOrDefaultAsync(h => h.Id == id, cancellationToken);
+            .Include(h => h.Matter)
+            .FirstOrDefaultAsync(h =>
+                h.Id == id &&
+                h.Matter.AdvocateId == _currentUser.UserId,
+                cancellationToken);
 
         if (hearing == null)
             return NotFound();
@@ -88,7 +117,18 @@ public class HearingsController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
+        // P1 FIX: Verify ownership before mediator.
+        var ownsHearing = await _db.Hearings.AnyAsync(h =>
+            h.Id == id &&
+            h.Matter.AdvocateId == _currentUser.UserId);
+
+        if (!ownsHearing)
+            return NotFound();
+
         var hearing = await _mediator.Send(new GetHearingByIdQuery(id));
+
+        if (hearing == null)
+            return NotFound();
 
         return Ok(hearing);
     }

@@ -73,6 +73,9 @@ builder.Services.AddScoped<ILegalDocumentRepository, LegalDocumentRepository>();
 builder.Services.AddScoped<ClientService>();
 builder.Services.AddScoped<LegalDocumentService>();
 builder.Services.AddScoped<PdfExportService>();
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 builder.Services.Configure<OllamaSettings>(
     builder.Configuration.GetSection("Ollama"));

@@ -9,13 +9,16 @@ public class ClientService
 {
     private readonly IClientRepository _repo;
     private readonly IDraftLexDbContext _db;
+    private readonly ICurrentUserService _currentUser;
 
     public ClientService(
         IClientRepository repo,
-        IDraftLexDbContext db)
+        IDraftLexDbContext db,
+        ICurrentUserService currentUser)
     {
         _repo = repo;
         _db = db;
+        _currentUser = currentUser;
     }
 
     // Create Client
@@ -31,7 +34,10 @@ public class ClientService
             FatherName = request.FatherName,
             Mobile = request.Mobile,
             Email = request.Email,
-            Address = request.Address
+            Address = request.Address,
+            CreatedAt = DateTime.UtcNow,
+            IsActive = true,
+            AdvocateId = _currentUser.UserId
         };
 
         await _repo.AddAsync(client);
@@ -40,30 +46,39 @@ public class ClientService
         return Map(client);
     }
 
-    // Get All Clients
+    // Get All Clients (ONLY current advocate)
     public async Task<List<ClientResponse>> GetAllAsync()
     {
-        var clients = await _repo.GetAllAsync();
+        var clients = await _db.Clients
+            .Where(c => c.IsActive && c.AdvocateId == _currentUser.UserId)
+            .OrderByDescending(c => c.CreatedAt)
+            .ToListAsync();
+
         return clients.Select(Map).ToList();
     }
 
-    // Get Client by Id
+    // Get Client by Id (ONLY current advocate)
     public async Task<ClientResponse?> GetByIdAsync(Guid id)
     {
-        var client = await _repo.GetByIdAsync(id);
+        var client = await _db.Clients
+            .FirstOrDefaultAsync(c =>
+                c.Id == id &&
+                c.IsActive &&
+                c.AdvocateId == _currentUser.UserId);
 
-        if (client == null || !client.IsActive)
-            return null;
-
-        return Map(client);
+        return client == null ? null : Map(client);
     }
 
-    // Update Client
+    // Update Client (ONLY current advocate)
     public async Task<bool> UpdateAsync(Guid id, UpdateClientRequest request)
     {
-        var client = await _repo.GetByIdAsync(id);
+        var client = await _db.Clients
+            .FirstOrDefaultAsync(c =>
+                c.Id == id &&
+                c.IsActive &&
+                c.AdvocateId == _currentUser.UserId);
 
-        if (client == null || !client.IsActive)
+        if (client == null)
             return false;
 
         client.FullName = request.FullName;
@@ -78,12 +93,16 @@ public class ClientService
         return true;
     }
 
-    // Soft Delete Client
+    // Soft Delete Client (ONLY current advocate)
     public async Task<bool> DeleteAsync(Guid id)
     {
-        var client = await _repo.GetByIdAsync(id);
+        var client = await _db.Clients
+            .FirstOrDefaultAsync(c =>
+                c.Id == id &&
+                c.IsActive &&
+                c.AdvocateId == _currentUser.UserId);
 
-        if (client == null || !client.IsActive)
+        if (client == null)
             return false;
 
         await _repo.SoftDeleteAsync(client);
@@ -105,11 +124,24 @@ public class ClientService
         };
     }
 
+    // ===========================
     // Client Matters
+    // ===========================
+
     public async Task<List<ClientMatterResponse>> GetMattersAsync(Guid clientId)
     {
+        var ownsClient = await _db.Clients.AnyAsync(c =>
+            c.Id == clientId &&
+            c.AdvocateId == _currentUser.UserId &&
+            c.IsActive);
+
+        if (!ownsClient)
+            return [];
+
         return await _db.Matters
-            .Where(m => m.ClientId == clientId)
+            .Where(m =>
+                m.ClientId == clientId &&
+                m.AdvocateId == _currentUser.UserId)
             .OrderByDescending(m => m.CreatedAt)
             .Select(m => new ClientMatterResponse
             {
@@ -122,10 +154,24 @@ public class ClientService
             .ToListAsync();
     }
 
+    // ===========================
+    // Client Hearings
+    // ===========================
+
     public async Task<List<ClientHearingResponse>> GetHearingsAsync(Guid clientId)
     {
+        var ownsClient = await _db.Clients.AnyAsync(c =>
+            c.Id == clientId &&
+            c.AdvocateId == _currentUser.UserId &&
+            c.IsActive);
+
+        if (!ownsClient)
+            return [];
+
         return await _db.Hearings
-            .Where(h => h.Matter.ClientId == clientId)
+            .Where(h =>
+                h.Matter.ClientId == clientId &&
+                h.Matter.AdvocateId == _currentUser.UserId)
             .OrderBy(h => h.HearingDate)
             .Select(h => new ClientHearingResponse
             {
@@ -140,10 +186,24 @@ public class ClientService
             .ToListAsync();
     }
 
+    // ===========================
+    // Client Documents
+    // ===========================
+
     public async Task<List<ClientDocumentResponse>> GetDocumentsAsync(Guid clientId)
     {
+        var ownsClient = await _db.Clients.AnyAsync(c =>
+            c.Id == clientId &&
+            c.AdvocateId == _currentUser.UserId &&
+            c.IsActive);
+
+        if (!ownsClient)
+            return [];
+
         return await _db.LegalDocuments
-            .Where(d => d.Matter.ClientId == clientId)
+            .Where(d =>
+                d.Matter.ClientId == clientId &&
+                d.Matter.AdvocateId == _currentUser.UserId)
             .OrderByDescending(d => d.UpdatedAt)
             .Select(d => new ClientDocumentResponse
             {
@@ -159,28 +219,36 @@ public class ClientService
             .ToListAsync();
     }
 
+    // ===========================
+    // Client Timeline
+    // ===========================
+
     public async Task<List<ClientTimelineResponse>> GetTimelineAsync(Guid clientId)
     {
-        var timeline = new List<ClientTimelineResponse>();
-
-        // 1. Client Created
         var client = await _db.Clients
-            .FirstOrDefaultAsync(c => c.Id == clientId);
+            .FirstOrDefaultAsync(c =>
+                c.Id == clientId &&
+                c.AdvocateId == _currentUser.UserId &&
+                c.IsActive);
 
-        if (client != null)
+        if (client == null)
+            return [];
+
+        var timeline = new List<ClientTimelineResponse>
         {
-            timeline.Add(new ClientTimelineResponse
+            new()
             {
                 Date = client.CreatedAt,
                 Type = "Client",
                 Title = "Client Created",
                 Description = client.FullName
-            });
-        }
+            }
+        };
 
-        // 2. Matters Created
         var matters = await _db.Matters
-            .Where(m => m.ClientId == clientId)
+            .Where(m =>
+                m.ClientId == clientId &&
+                m.AdvocateId == _currentUser.UserId)
             .ToListAsync();
 
         timeline.AddRange(matters.Select(m => new ClientTimelineResponse
@@ -191,10 +259,11 @@ public class ClientService
             Description = $"{m.MatterNumber} • {m.Title}"
         }));
 
-        // 3. Hearings Scheduled
         var hearings = await _db.Hearings
             .Include(h => h.Matter)
-            .Where(h => h.Matter.ClientId == clientId)
+            .Where(h =>
+                h.Matter.ClientId == clientId &&
+                h.Matter.AdvocateId == _currentUser.UserId)
             .ToListAsync();
 
         timeline.AddRange(hearings.Select(h => new ClientTimelineResponse
@@ -205,10 +274,11 @@ public class ClientService
             Description = $"{h.Stage} • {h.Matter.Title}"
         }));
 
-        // 4. Documents Generated
         var documents = await _db.LegalDocuments
             .Include(d => d.Matter)
-            .Where(d => d.Matter.ClientId == clientId)
+            .Where(d =>
+                d.Matter.ClientId == clientId &&
+                d.Matter.AdvocateId == _currentUser.UserId)
             .ToListAsync();
 
         timeline.AddRange(documents.Select(d => new ClientTimelineResponse
@@ -219,7 +289,6 @@ public class ClientService
             Description = $"{d.DocumentType} • {d.Title}"
         }));
 
-        // 5. Sort newest first
         return timeline
             .OrderByDescending(x => x.Date)
             .ToList();
