@@ -4,4 +4,5 @@
   <Project Path="backend/DraftLex.Domain/DraftLex.Domain.csproj" />
   <Project Path="backend/DraftLex.Infrastructure/DraftLex.Infrastructure.csproj" />
   <Project Path="backend/DraftLex.Tests/DraftLex.Tests.csproj" />
+  <Project Path="DraftLex.NotificationAgent/DraftLex.NotificationAgent.csproj" />
 </Solution>

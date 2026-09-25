@@ -42,7 +42,7 @@ export default function Sidebar() {
         <h1 className="text-2xl font-bold tracking-wide">DraftLex</h1>
         <p className="mt-1 text-sm text-slate-400">
           {i18n.language.startsWith("hi")
-            ? "भारतीय विधिक प्रबंधन"
+            ? "विधिक प्रबंधन"
             : "Legal Management"}
         </p>
       </div>

@@ -42,11 +42,16 @@ public class HearingsController : ControllerBase
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
         var hearings = await _db.Hearings
+            .Include(h => h.Matter)
+            .ThenInclude(m => m.Client)
             .OrderBy(h => h.HearingDate)
             .Select(h => new
             {
                 h.Id,
                 h.MatterId,
+                MatterTitle = h.Matter.Title,
+                Court = h.Matter.Court,
+                ClientName = h.Matter.Client.FullName,
                 h.HearingDate,
                 h.Stage,
                 h.JudgeName,

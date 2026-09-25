@@ -32,3 +32,23 @@ dist/
 
 # NuGet
 packages/
+
+# DraftLex Notification Agent
+DraftLex.NotificationAgent/Auth/
+DraftLex.NotificationAgent/bin/
+DraftLex.NotificationAgent/obj/
+
+# Playwright
+.playwright/
+playwright.ps1
+
+# .NET
+**/bin/
+**/obj/
+
+# Logs
+*.log
+notification.log
+
+# VS
+.vs/
