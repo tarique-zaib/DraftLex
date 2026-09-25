@@ -203,7 +203,7 @@ export default function Dashboard() {
               className="rounded-xl bg-blue-600 p-5 text-left text-white shadow transition hover:bg-blue-700"
             >
               <CalendarPlus className="mb-3" size={28} />
-              <div className="font-semibold">New Hearing</div>
+              <div className="font-semibold">{i18n.t("newHearing")}</div>
             </button>
 
             <button
@@ -211,7 +211,7 @@ export default function Dashboard() {
               className="rounded-xl bg-emerald-600 p-5 text-left text-white shadow transition hover:bg-emerald-700"
             >
               <FileText className="mb-3" size={28} />
-              <div className="font-semibold">New Document</div>
+              <div className="font-semibold">{i18n.t("newDocument")}</div>
             </button>
 
             <button
@@ -219,7 +219,7 @@ export default function Dashboard() {
               className="rounded-xl bg-purple-600 p-5 text-left text-white shadow transition hover:bg-purple-700"
             >
               <Sparkles className="mb-3" size={28} />
-              <div className="font-semibold">AI Draft</div>
+              <div className="font-semibold">{i18n.t("aiDraft")}</div>
             </button>
 
             <button
@@ -227,7 +227,7 @@ export default function Dashboard() {
               className="rounded-xl bg-amber-500 p-5 text-left text-white shadow transition hover:bg-amber-600"
             >
               <CalendarDays className="mb-3" size={28} />
-              <div className="font-semibold">Calendar</div>
+              <div className="font-semibold">{i18n.t("calendar")}</div>
             </button>
           </div>
 

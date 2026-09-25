@@ -129,6 +129,9 @@
   "tomorrow": "Tomorrow",
   "days": "Days",
   "startsIn": "Starts in",
-  "inProgress": "In Progress"
+  "inProgress": "In Progress",
+  "newdocument": "New Document",
+  "newhearing": "New Hearing",
+  "aiDraft": "AI Draft"
   
 }

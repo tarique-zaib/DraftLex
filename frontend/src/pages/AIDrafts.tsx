@@ -138,7 +138,7 @@ export default function AIDrafts() {
       }
     } catch (err) {
       console.error(err);
-      alert(isHindi ? "ड्राफ्ट नहीं बन सका।" : "Failed to generate draft.");
+      alert(isHindi ? "मसौदा नहीं बन सका।" : "Failed to generate draft.");
     } finally {
       setLoading(false);
     }
@@ -162,12 +162,12 @@ export default function AIDrafts() {
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">
-                {isHindi ? "एआई ड्राफ्ट" : "AI Drafts"}
+                {isHindi ? "एआई मसौदा" : "AI Drafts"}
               </h1>
 
               <p className="text-slate-500">
                 {isHindi
-                  ? "कोर्ट-रेडी कानूनी ड्राफ्ट तैयार करें।"
+                  ? "कोर्ट-रेडी कानूनी मसौदा तैयार करें।"
                   : "Generate court-ready legal drafts using DraftLex AI."}
               </p>
             </div>
@@ -232,7 +232,7 @@ export default function AIDrafts() {
 
               <div>
                 <label className="mb-2 block text-sm font-medium">
-                  {isHindi ? "ड्राफ्ट भाषा" : "Draft Language"}
+                  {isHindi ? "मसौदा भाषा" : "Draft Language"}
                 </label>
 
                 <div className="rounded-lg border border-slate-300 bg-slate-100 p-3 font-medium">
@@ -312,7 +312,7 @@ export default function AIDrafts() {
               }
               placeholder={
                 isHindi
-                  ? "यहाँ केवल तथ्य लिखिए। एआई स्वयं कोर्ट-रेडी ड्राफ्ट तैयार करेगा।"
+                  ? "यहाँ केवल तथ्य लिखिए। एआई स्वयं कोर्ट-रेडी मसौदा तैयार करेगा।"
                   : "Describe the facts or insert ready-made clauses..."
               }
               className="mt-2 w-full rounded-lg border border-slate-300 p-4"
@@ -324,7 +324,7 @@ export default function AIDrafts() {
               <div className="mb-2 flex items-center gap-2 font-semibold text-blue-800">
                 <Sparkles size={18} />
                 {isHindi
-                  ? "कोर्ट-रेडी ड्राफ्ट में शामिल होगा"
+                  ? "कोर्ट-रेडी मसौदा में शामिल होगा"
                   : "Your generated draft will include"}
               </div>
 
@@ -370,10 +370,10 @@ export default function AIDrafts() {
 
                 {loading
                   ? isHindi
-                    ? "ड्राफ्ट बन रहा है..."
+                    ? "मसौदा बन रहा है..."
                     : "Generating..."
                   : isHindi
-                    ? "कोर्ट-रेडी ड्राफ्ट बनाएँ"
+                    ? "कोर्ट-रेडी मसौदा बनाएँ"
                     : "Generate Court-Ready Draft"}
               </button>
             </div>

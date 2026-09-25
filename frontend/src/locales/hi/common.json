@@ -1,11 +1,11 @@
 {
   "welcome": "स्वागत है, अधिवक्ता {{name}}",
-  "manageClientsMattersAiDrafts": "मुवक्किल, मामलों और AI कानूनी ड्राफ्ट का प्रबंधन करें।",
+  "manageClientsMattersAiDrafts": "मुवक्किल, मामलों और एआई कानूनी मसौदा का प्रबंधन करें।",
   "clients": "मुवक्किल",
   "activeMatters": "सक्रिय मामले",
   "hearings": "सुनवाई",
-  "aiDocuments": "AI दस्तावेज़",
-  "generateDraft": "AI ड्राफ्ट बनाएँ",
+  "aiDocuments": "एआई दस्तावेज़",
+  "generateDraft": "एआई मसौदा बनाएँ",
   "recentMatters": "हाल के मामले",
   "upcomingHearings": "आगामी सुनवाई",
   "noMattersYet": "अभी तक कोई मामला नहीं है।",
@@ -16,7 +16,7 @@
   "dashboard": "डैशबोर्ड",
   "matters": "मामले",
   "documents": "दस्तावेज़",
-  "aiDrafts": "AI ड्राफ्ट",
+  "aiDrafts": "एआई मसौदा",
   "clientsPage": "मुवक्किल",
   "newClient": "नया मुवक्किल",
 
@@ -68,13 +68,13 @@
   "address": "पता",
   "notAvailable": "उपलब्ध नहीं",
   "version": "संस्करण",
-  "noAiDocuments": "अभी कोई AI दस्तावेज़ नहीं।",
+  "noAiDocuments": "अभी कोई एआई दस्तावेज़ नहीं।",
 
   "documentsSubtitle": "अपने सभी न्यायिक दस्तावेज़ एक स्थान पर देखें।",
   "searchDocuments": "दस्तावेज़ खोजें...",
   "loadingDocuments": "दस्तावेज़ लोड हो रहे हैं...",
   "noDocuments": "अभी कोई दस्तावेज़ उपलब्ध नहीं है।",
-  "noDocumentsHint": "AI ड्राफ्ट तैयार करें और वह यहाँ दिखाई देगा।",
+  "noDocumentsHint": "एआई मसौदा तैयार करें और वह यहाँ दिखाई देगा।",
 
   "matter": "मुकदमा",
   "updated": "अद्यतन",
@@ -139,11 +139,12 @@
   "todaysCauseList": "आज की कारण सूची",  
   "noHearingsToday": "आज कोई सुनवाई नहीं है",  
   "stage": "चरण",  
-  "newDocument": "नया दस्तावेज़",
-  "calendar": "कैलेंडर",
+  "newDocument": "नया दस्तावेज़",  
   "tomorrow": "कल",
   "days": "दिन",
   "startsIn": "शुरू होने में",
-  "inProgress": "सुनवाई जारी है"  
+  "inProgress": "सुनवाई जारी है",  
+  "calendar": "पंचांग",
+  "aiDraft": "एआई मसौदा"
 }
 
