@@ -11,6 +11,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DraftLex.Api.Controllers;
 
+public class UpdateMatterRequest
+{
+    public string Title { get; set; } = "";
+    public string Court { get; set; } = "";
+    public string MatterType { get; set; } = "";
+    public string Status { get; set; } = "";
+}
+
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
@@ -36,16 +44,13 @@ public class MattersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateMatterCommand command)
     {
-        // Ownership should be assigned inside CreateMatterHandler.
         var id = await _mediator.Send(command);
-
         return CreatedAtAction(nameof(Get), new { id }, new { id });
     }
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Get(Guid id)
     {
-        // P1 FIX: Verify ownership before returning data.
         var ownsMatter = await _db.Matters.AnyAsync(m =>
             m.Id == id &&
             m.AdvocateId == _currentUser.UserId);
@@ -59,6 +64,38 @@ public class MattersController : ControllerBase
             return NotFound();
 
         return Ok(result);
+    }
+
+    // =========================
+    // UPDATE MATTER
+    // =========================
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(
+        Guid id,
+        [FromBody] UpdateMatterRequest request,
+        CancellationToken cancellationToken)
+    {
+        var matter = await _db.Matters
+            .FirstOrDefaultAsync(m =>
+                m.Id == id &&
+                m.AdvocateId == _currentUser.UserId,
+                cancellationToken);
+
+        if (matter == null)
+            return NotFound();
+
+        matter.Title = request.Title;
+        matter.Court = request.Court;
+        matter.MatterType = request.MatterType;
+        matter.Status = request.Status;
+
+        await _db.SaveChangesAsync(cancellationToken);
+
+        return Ok(new
+        {
+            success = true,
+            message = "Matter updated successfully."
+        });
     }
 
     [HttpGet("{id:guid}/timeline")]
@@ -94,7 +131,6 @@ public class MattersController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        // P1 FIX: Only return the logged-in advocate's matters.
         var matters = await _db.Matters
             .Where(m => m.AdvocateId == _currentUser.UserId)
             .Include(m => m.Client)
@@ -105,6 +141,7 @@ public class MattersController : ControllerBase
                 matterNumber = m.MatterNumber,
                 title = m.Title,
                 court = m.Court,
+                matterType = m.MatterType,
                 status = m.Status,
                 clientId = m.ClientId,
                 client = new

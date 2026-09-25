@@ -135,16 +135,24 @@
   "riskLevel": "जोखिम स्तर",
   "nextRecommendedAction": "अगला कदम",
   "regenerate": "पुनः तैयार करें",
-  
-  "todaysCauseList": "आज की कारण सूची",  
-  "noHearingsToday": "आज कोई सुनवाई नहीं है",  
-  "stage": "चरण",  
-  "newDocument": "नया दस्तावेज़",  
+
+  "todaysCauseList": "आज की कारण सूची",
+  "noHearingsToday": "आज कोई सुनवाई नहीं है",
+  "stage": "चरण",
+  "newDocument": "नया दस्तावेज़",
   "tomorrow": "कल",
   "days": "दिन",
   "startsIn": "शुरू होने में",
-  "inProgress": "सुनवाई जारी है",  
+  "inProgress": "सुनवाई जारी है",
   "calendar": "पंचांग",
-  "aiDraft": "एआई मसौदा"
-}
+  "aiDraft": "एआई मसौदा",
+  "inTheCourtOf": "न्यायालय",
+  "caseTitle": "वाद शीर्षक",
+  "caseTimeline": "मामले की समयरेखा",
+  "noTimeline": "अभी तक कोई गतिविधि नहीं है।",
+  "matterRegistered": "मामला पंजीकृत",
+  "matterCreated": "मामला {{number}} दर्ज किया गया।",
 
+  "continue": "जारी रखें",
+  "matterTitle": "मामले का शीर्षक"
+}

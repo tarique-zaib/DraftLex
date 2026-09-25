@@ -114,15 +114,12 @@
   "nextRecommendedAction": "Next Recommended Action",
   "regenerate": "Regenerate",
 
-  
-
   "todaysCauseList": "Today's Cause List",
-  
+
   "noHearingsToday": "No hearings today.",
-  
+
   "stage": "Stage",
 
-  
   "newDocument": "New Document",
   "calendar": "Calendar",
 
@@ -132,6 +129,14 @@
   "inProgress": "In Progress",
   "newdocument": "New Document",
   "newhearing": "New Hearing",
-  "aiDraft": "AI Draft"
-  
+  "aiDraft": "AI Draft",
+  "inTheCourtOf": "IN THE COURT OF",
+  "caseTitle": "Case Title",
+  "caseTimeline": "Case Timeline",
+  "noTimeline": "No timeline activity yet.",
+  "matterRegistered": "Matter Registered",
+  "matterCreated": "Matter {{number}} created.",
+  "continue": "Continue",
+
+  "matterTitle": "Matter Title"
 }

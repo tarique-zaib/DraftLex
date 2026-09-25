@@ -13,6 +13,7 @@ import {
   Sparkles,
   ShieldAlert,
   RefreshCw,
+  Circle,
 } from "lucide-react";
 
 import { getMatter } from "../api/matters";
@@ -22,6 +23,54 @@ import CopilotPanel from "../components/CopilotPanel";
 import { legalText } from "../utils/legalTranslations";
 import i18n from "../i18n";
 import api from "../api/client";
+
+function Info({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </div>
+
+      <div className="mt-1 text-lg font-semibold text-slate-900">
+        {value || "-"}
+      </div>
+    </div>
+  );
+}
+
+const timelineIcons: Record<string, any> = {
+  Matter: Scale,
+  Hearing: CalendarDays,
+  Document: FileText,
+  AI: Sparkles,
+};
+
+function formatTimelineDate(date: string) {
+  const d = new Date(date);
+  const today = new Date();
+
+  today.setHours(0, 0, 0, 0);
+
+  const compare = new Date(d);
+  compare.setHours(0, 0, 0, 0);
+
+  const diff = Math.round(
+    (today.getTime() - compare.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  if (diff === 0) return i18n.language.startsWith("hi") ? "आज" : "Today";
+
+  if (diff === 1) return i18n.language.startsWith("hi") ? "कल" : "Yesterday";
+
+  return d.toLocaleDateString(
+    i18n.language.startsWith("hi") ? "hi-IN" : "en-IN",
+    {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    },
+  );
+}
 
 export default function MatterWorkspace() {
   const { id } = useParams();
@@ -34,6 +83,14 @@ export default function MatterWorkspace() {
   const [, setLang] = useState(i18n.language);
 
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const [editTitle, setEditTitle] = useState("");
+  const [editCourt, setEditCourt] = useState("");
+  const [editMatterType, setEditMatterType] = useState("");
+  const [editStatus, setEditStatus] = useState("");
 
   const [caseSummary, setCaseSummary] = useState<{
     summary: string;
@@ -42,6 +99,80 @@ export default function MatterWorkspace() {
     nextAction: string;
     nextHearing?: string;
   } | null>(null);
+
+  function aiText(text?: string) {
+    if (!text) return "";
+    if (!i18n.language.startsWith("hi")) return text;
+
+    return text
+      .replace(
+        /^This is a Consumer matter involving (.+) before (.+)\.$/i,
+        "यह $2 में $1 से संबंधित उपभोक्ता मामला है।",
+      )
+      .replace(/^Consumer matter\.$/i, "उपभोक्ता मामला।")
+      .replace(/^Court:\s*(.+)\.$/i, "न्यायालय: $1।")
+      .replace(/^Client:\s*(.+)\.$/i, "मुवक्किल: $1।")
+      .replace(/^Next hearing:\s*(.+)\.$/i, "अगली सुनवाई: $1।")
+      .replace(/^Prepare for First Hearing\.$/i, "प्रथम सुनवाई की तैयारी करें।")
+      .replace(
+        /^(\d+)\s*document\(s\)\s*available\.$/i,
+        "$1 दस्तावेज उपलब्ध हैं।",
+      )
+      .replace(/^Medium$/i, "मध्यम")
+      .replace(/^High$/i, "उच्च")
+      .replace(/^Low$/i, "कम");
+  }
+
+  const loadCaseSummary = async () => {
+    if (!id) return;
+
+    try {
+      setSummaryLoading(true);
+
+      const { data } = await api.get(`/AI/case-summary/${id}`);
+
+      setCaseSummary(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const saveMatter = async () => {
+    if (!id) return;
+
+    try {
+      await api.put(`/Matters/${id}`, {
+        title: editTitle,
+        court: editCourt,
+        matterType: editMatterType,
+        status: editStatus,
+      });
+
+      // Update UI immediately
+      setMatter((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              title: editTitle,
+              court: editCourt,
+              matterType: editMatterType,
+              status: editStatus,
+            }
+          : prev,
+      );
+
+      setShowEditModal(false);
+    } catch (err) {
+      console.error(err);
+      alert(
+        i18n.language.startsWith("hi")
+          ? "मामला अपडेट नहीं हो सका।"
+          : "Failed to update matter.",
+      );
+    }
+  };
 
   useEffect(() => {
     const handler = (lng: string) => setLang(lng);
@@ -54,20 +185,31 @@ export default function MatterWorkspace() {
       try {
         if (!id) return;
 
-        const [matterResult, hearingResult, documentResult] =
+        const [matterResult, hearingResult, documentResult, timelineResult] =
           await Promise.allSettled([
             getMatter(id),
             getHearingsByMatter(id),
             getDocumentsByMatter(id),
+            api.get(`/Matters/${id}/timeline`),
           ]);
 
-        if (matterResult.status === "fulfilled") setMatter(matterResult.value);
+        if (matterResult.status === "fulfilled") {
+          setMatter(matterResult.value);
+          setEditTitle(matterResult.value.title);
+          setEditCourt(matterResult.value.court);
+          setEditMatterType(matterResult.value.matterType);
+          setEditStatus(matterResult.value.status);
+        }
 
         if (hearingResult.status === "fulfilled")
           setHearings(hearingResult.value);
 
         if (documentResult.status === "fulfilled")
           setDocuments(documentResult.value);
+
+        if (timelineResult.status === "fulfilled")
+          setTimeline(timelineResult.value.data);
+
         await loadCaseSummary();
 
         if (matterResult.status === "rejected")
@@ -78,6 +220,9 @@ export default function MatterWorkspace() {
 
         if (documentResult.status === "rejected")
           console.error(documentResult.reason);
+
+        if (timelineResult.status === "rejected")
+          console.error(timelineResult.reason);
       } finally {
         setLoading(false);
       }
@@ -102,22 +247,6 @@ export default function MatterWorkspace() {
     );
   }
 
-  const loadCaseSummary = async () => {
-    if (!id) return;
-
-    try {
-      setSummaryLoading(true);
-
-      const { data } = await api.get(`/AI/case-summary/${id}`);
-
-      setCaseSummary(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSummaryLoading(false);
-    }
-  };
-
   const progress =
     matter.status === "Closed" ? 100 : matter.status === "Active" ? 65 : 35;
 
@@ -138,24 +267,32 @@ export default function MatterWorkspace() {
         <div className="space-y-6">
           {/* HERO */}
           <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-            <div className="rounded-2xl bg-gradient-to-r from-slate-900 to-blue-800 p-8 text-white">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <h1 className="text-4xl font-bold">{matter.title}</h1>
+            <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 p-8 text-white">
+              <div className="border-b border-white/15 pb-5 text-center">
+                <p className="text-xs font-semibold tracking-[0.35em] text-blue-200 uppercase">
+                  {i18n.t("inTheCourtOf")}
+                </p>
 
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="rounded-full bg-blue-500/30 px-3 py-1 text-sm">
-                      {legalText(matter.matterType)}
-                    </span>
+                <h1 className="mt-3 text-3xl font-bold md:text-4xl">
+                  {matter.court}
+                </h1>
 
-                    <span className="rounded-full bg-green-500/30 px-3 py-1 text-sm">
-                      {legalText(matter.status)}
-                    </span>
+                <p className="mt-2 text-blue-200">{matter.title}</p>
+              </div>
 
-                    <span className="rounded-full bg-white/10 px-3 py-1 text-sm">
-                      {matter.matterNumber}
-                    </span>
-                  </div>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full bg-white/10 px-3 py-1 text-sm">
+                    {i18n.t("matterNumber")}: {matter.matterNumber}
+                  </span>
+
+                  <span className="rounded-full bg-blue-500/25 px-3 py-1 text-sm">
+                    {legalText(matter.matterType)}
+                  </span>
+
+                  <span className="rounded-full bg-green-500/25 px-3 py-1 text-sm">
+                    {legalText(matter.status)}
+                  </span>
                 </div>
 
                 <button
@@ -166,23 +303,34 @@ export default function MatterWorkspace() {
                 </button>
               </div>
 
-              <div className="mt-8 grid gap-4 md:grid-cols-3">
-                <div>
-                  <p className="text-sm text-blue-200">{i18n.t("court")}</p>
-                  <p className="font-semibold">{matter.court}</p>
+              <div className="mt-8 grid gap-5 md:grid-cols-3">
+                <div className="rounded-xl bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-wide text-blue-200">
+                    {i18n.t("client")}
+                  </p>
+
+                  <p className="mt-1 font-semibold">
+                    {matter.client?.fullName || "—"}
+                  </p>
                 </div>
 
-                <div>
-                  <p className="text-sm text-blue-200">{i18n.t("judge")}</p>
-                  <p className="font-semibold">
+                <div className="rounded-xl bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-wide text-blue-200">
+                    {i18n.t("judge")}
+                  </p>
+
+                  <p className="mt-1 font-semibold">
                     {matter.judgeName || i18n.t("notAssigned")}
                   </p>
                 </div>
 
-                <div>
-                  <p className="text-sm text-blue-200">{i18n.t("client")}</p>
-                  <p className="font-semibold">
-                    {matter.client?.fullName || "—"}
+                <div className="rounded-xl bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-wide text-blue-200">
+                    {i18n.t("status")}
+                  </p>
+
+                  <p className="mt-1 font-semibold">
+                    {legalText(matter.status)}
                   </p>
                 </div>
               </div>
@@ -190,7 +338,7 @@ export default function MatterWorkspace() {
           </div>
 
           {caseSummary && (
-            <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 shadow-sm">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="rounded-xl bg-blue-600 p-3 text-white">
@@ -229,7 +377,7 @@ export default function MatterWorkspace() {
               </div>
 
               <p className="mb-6 leading-7 text-slate-700">
-                {caseSummary.summary}
+                {aiText(caseSummary.summary)}
               </p>
 
               <div className="grid gap-6 lg:grid-cols-3">
@@ -246,7 +394,7 @@ export default function MatterWorkspace() {
                     {caseSummary.keyFacts.map((fact, index) => (
                       <li key={index} className="flex gap-2 text-sm">
                         <span className="mt-1 h-2 w-2 rounded-full bg-blue-600" />
-                        {fact}
+                        {aiText(fact)}
                       </li>
                     ))}
                   </ul>
@@ -271,7 +419,7 @@ export default function MatterWorkspace() {
                     }`}
                   >
                     <ShieldAlert size={16} />
-                    {caseSummary.riskLevel}
+                    {legalText(caseSummary.riskLevel)}
                   </span>
                 </div>
 
@@ -285,7 +433,7 @@ export default function MatterWorkspace() {
                   </h3>
 
                   <p className="text-sm text-slate-700">
-                    {caseSummary.nextAction}
+                    {aiText(caseSummary.nextAction)}
                   </p>
 
                   {caseSummary.nextHearing && (
@@ -444,40 +592,93 @@ export default function MatterWorkspace() {
                 {hearings.length === 0 ? (
                   <EmptyCard text={i18n.t("noHearingsScheduled")} />
                 ) : (
-                  hearings.map((h) => (
-                    <div
-                      key={h.id}
-                      className="rounded-lg border border-slate-200 p-4 transition hover:bg-slate-50"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold">{legalText(h.stage)}</p>
+                  hearings.map((h) => {
+                    const hearingDate = new Date(h.hearingDate);
+                    const today = new Date();
 
-                          <p className="text-sm text-slate-500">
-                            {new Date(h.hearingDate).toLocaleDateString(
-                              i18n.language.startsWith("hi")
-                                ? "hi-IN"
-                                : "en-IN",
-                              {
-                                day: "2-digit",
-                                month: "long",
-                                year: "numeric",
-                              },
-                            )}
-                          </p>
+                    today.setHours(0, 0, 0, 0);
 
-                          <p className="text-xs text-slate-400">
-                            {h.judgeName || i18n.t("judgeTBD")} •{" "}
-                            {h.courtRoom || i18n.t("courtTBD")}
-                          </p>
+                    const compareDate = new Date(h.hearingDate);
+                    compareDate.setHours(0, 0, 0, 0);
+
+                    const diff = Math.round(
+                      (compareDate.getTime() - today.getTime()) /
+                        (1000 * 60 * 60 * 24),
+                    );
+
+                    const badge =
+                      diff === 0
+                        ? {
+                            text: i18n.t("today"),
+                            cls: "bg-red-100 text-red-700",
+                          }
+                        : diff === 1
+                          ? {
+                              text: i18n.t("tomorrow"),
+                              cls: "bg-orange-100 text-orange-700",
+                            }
+                          : {
+                              text: i18n.t("upcoming"),
+                              cls: "bg-blue-100 text-blue-700",
+                            };
+
+                    return (
+                      <div
+                        key={h.id}
+                        className="rounded-xl border border-slate-200 p-5 transition hover:border-blue-300 hover:shadow-sm"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-900">
+                              {legalText(h.stage)}
+                            </h3>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                              {hearingDate.toLocaleDateString(
+                                i18n.language.startsWith("hi")
+                                  ? "hi-IN"
+                                  : "en-IN",
+                                {
+                                  weekday: "long",
+                                  day: "2-digit",
+                                  month: "long",
+                                  year: "numeric",
+                                },
+                              )}
+                            </p>
+                          </div>
+
+                          <span
+                            className={`rounded-full px-3 py-1 text-sm font-medium ${badge.cls}`}
+                          >
+                            {badge.text}
+                          </span>
                         </div>
 
-                        <span className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700">
-                          {i18n.t("upcoming")}
-                        </span>
+                        <div className="mt-4 grid gap-3 md:grid-cols-2">
+                          <div className="rounded-lg bg-slate-50 p-3">
+                            <div className="text-xs uppercase tracking-wide text-slate-500">
+                              {i18n.t("judge")}
+                            </div>
+
+                            <div className="mt-1 font-medium">
+                              {h.judgeName || i18n.t("judgeTBD")}
+                            </div>
+                          </div>
+
+                          <div className="rounded-lg bg-slate-50 p-3">
+                            <div className="text-xs uppercase tracking-wide text-slate-500">
+                              {i18n.t("courtRoom")}
+                            </div>
+
+                            <div className="mt-1 font-medium">
+                              {h.courtRoom || i18n.t("courtTBD")}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </Section>
@@ -530,6 +731,90 @@ export default function MatterWorkspace() {
               </div>
             </Section>
           </div>
+          {/* CASE TIMELINE */}
+
+          <Section
+            title={i18n.t("caseTimeline")}
+            icon={<CalendarDays size={20} />}
+          >
+            <div className="relative ml-3 border-l-2 border-slate-200 pl-6">
+              {timeline.length === 0 ? (
+                <EmptyCard text={i18n.t("noTimeline")} />
+              ) : (
+                timeline.map((event: any) => {
+                  const type = event.eventType || event.type || "";
+
+                  const Icon = type.startsWith("Matter")
+                    ? Scale
+                    : type === "Hearing"
+                      ? CalendarDays
+                      : type === "Document"
+                        ? FileText
+                        : type === "AI"
+                          ? Sparkles
+                          : Circle;
+
+                  const iconColor = type.startsWith("Matter")
+                    ? "text-blue-600"
+                    : type === "Hearing"
+                      ? "text-orange-600"
+                      : type === "Document"
+                        ? "text-indigo-600"
+                        : type === "AI"
+                          ? "text-purple-600"
+                          : "text-slate-500";
+
+                  return (
+                    <div key={event.id} className="relative mb-6">
+                      <div
+                        className={`absolute -left-[40px] rounded-full border-4 border-white p-2 shadow-lg ${
+                          type.startsWith("Matter")
+                            ? "bg-blue-50"
+                            : type === "Hearing"
+                              ? "bg-orange-50"
+                              : type === "Document"
+                                ? "bg-indigo-50"
+                                : type === "AI"
+                                  ? "bg-purple-50"
+                                  : "bg-slate-50"
+                        }`}
+                      >
+                        <Icon size={18} className={iconColor} />
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-white px-5 py-3 shadow-sm transition hover:border-blue-300 hover:shadow-md">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold text-slate-900">
+                            {type.startsWith("Matter")
+                              ? i18n.t("matterRegistered")
+                              : legalText(event.title)}
+                          </h3>
+
+                          <span className="text-xs text-slate-500">
+                            {formatTimelineDate(
+                              event.eventDate || event.date || event.createdAt,
+                            )}
+                          </span>
+                        </div>
+
+                        {type.startsWith("Matter") ? (
+                          <p className="mt-2 text-sm leading-6 text-slate-600">
+                            {i18n.t("matterCreated", {
+                              number: matter.matterNumber,
+                            })}
+                          </p>
+                        ) : event.description ? (
+                          <p className="mt-2 text-sm leading-6 text-slate-600">
+                            {legalText(event.description)}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </Section>
         </div>
 
         {/* RIGHT - AI COPILOT */}
@@ -559,14 +844,20 @@ export default function MatterWorkspace() {
               {i18n.t("generateDraft")}
             </button>
 
-            <button className="flex w-full items-center gap-3 rounded-lg border border-slate-300 p-3 hover:bg-slate-50">
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="flex w-full items-center gap-3 rounded-lg border border-slate-300 p-3 hover:bg-slate-50"
+            >
               <Upload size={18} />
               {i18n.language.startsWith("hi")
                 ? "साक्ष्य अपलोड करें"
                 : "Upload Evidence"}
             </button>
 
-            <button className="flex w-full items-center gap-3 rounded-lg border border-slate-300 p-3 hover:bg-slate-50">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="flex w-full items-center gap-3 rounded-lg border border-slate-300 p-3 hover:bg-slate-50"
+            >
               <Pencil size={18} />
               {i18n.language.startsWith("hi")
                 ? "मामला संपादित करें"
@@ -577,6 +868,133 @@ export default function MatterWorkspace() {
           <CopilotPanel matterId={matter.id} />
         </div>
       </div>
+      {/* Upload Evidence Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-bold">
+                {i18n.language.startsWith("hi")
+                  ? "साक्ष्य अपलोड करें"
+                  : "Upload Evidence"}
+              </h2>
+
+              <button onClick={() => setShowUploadModal(false)}>✕</button>
+            </div>
+
+            <p className="mb-6 text-slate-600">
+              {i18n.language.startsWith("hi")
+                ? "इस मामले के लिए दस्तावेज़ पृष्ठ पर जाएँ।"
+                : "Continue to the Documents page to upload evidence for this matter."}
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="rounded-lg border border-slate-300 px-4 py-2"
+              >
+                {i18n.t("cancel")}
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  navigate("/documents");
+                }}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              >
+                {i18n.t("continue")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Matter Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-bold">
+                {i18n.language.startsWith("hi")
+                  ? "मामला संपादित करें"
+                  : "Edit Matter"}
+              </h2>
+
+              <button onClick={() => setShowEditModal(false)}>✕</button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-medium">
+                  {i18n.t("matterTitle")}
+                </label>
+
+                <input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  {i18n.t("court")}
+                </label>
+
+                <input
+                  value={editCourt}
+                  onChange={(e) => setEditCourt(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  {i18n.t("matterType")}
+                </label>
+
+                <input
+                  value={editMatterType}
+                  onChange={(e) => setEditMatterType(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-1 block text-sm font-medium">
+                  {i18n.t("status")}
+                </label>
+
+                <input
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="rounded-lg border border-slate-300 px-4 py-2"
+              >
+                {i18n.t("cancel")}
+              </button>
+
+              <button
+                onClick={() => {
+                  // Wire to Update Matter API next.
+                  saveMatter();
+                }}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              >
+                {i18n.t("saveChanges")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
