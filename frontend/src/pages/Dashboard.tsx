@@ -134,6 +134,18 @@ export default function Dashboard() {
     return `${i18n.t("startsIn")} ${h}h ${m}m`;
   }
 
+  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const weeklyData = weekDays.map((day, index) => ({
+    day,
+    count: upcomingHearings.filter((h) => {
+      const d = new Date(h.hearingDate);
+      return d.getDay() === index;
+    }).length,
+  }));
+
+  const maxCount = Math.max(...weeklyData.map((d) => d.count), 1);
+
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="flex">
@@ -229,6 +241,140 @@ export default function Dashboard() {
               <CalendarDays className="mb-3" size={28} />
               <div className="font-semibold">{i18n.t("calendar")}</div>
             </button>
+          </div>
+
+          {/* Weekly Hearings */}
+          <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {i18n.language.startsWith("hi")
+                    ? "साप्ताहिक सुनवाई"
+                    : "Weekly Hearings"}
+                </h2>
+
+                <p className="text-sm text-slate-500">
+                  {i18n.language.startsWith("hi")
+                    ? "आगामी 7 दिनों की गतिविधि"
+                    : "Upcoming hearing activity"}
+                </p>
+              </div>
+
+              <CalendarDays className="text-blue-600" size={28} />
+            </div>
+
+            <div className="space-y-4">
+              {weeklyData.map((item) => (
+                <div key={item.day} className="flex items-center gap-4">
+                  <div className="w-10 text-sm font-medium text-slate-600">
+                    {item.day}
+                  </div>
+
+                  <div className="h-3 flex-1 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                      style={{
+                        width: `${(item.count / maxCount) * 100}%`,
+                      }}
+                    />
+                  </div>
+
+                  <div className="w-8 text-right text-sm font-semibold text-slate-700">
+                    {item.count}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Today's Priority */}
+          <div className="mt-8 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white shadow-lg">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-100">
+                  {i18n.language.startsWith("hi")
+                    ? "आज की सर्वोच्च प्राथमिकता"
+                    : "Today's Priority"}
+                </p>
+
+                <h2 className="mt-1 text-2xl font-bold">
+                  {todayHearings.length > 0
+                    ? legalText(todayHearings[0].matterTitle)
+                    : i18n.language.startsWith("hi")
+                      ? "आज कोई सुनवाई नहीं"
+                      : "No Hearing Today"}
+                </h2>
+              </div>
+
+              <div className="rounded-full bg-white/20 p-4">
+                <Gavel size={30} />
+              </div>
+            </div>
+
+            {todayHearings.length > 0 ? (
+              <>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
+                    <p className="text-xs uppercase tracking-wide text-blue-100">
+                      {i18n.language.startsWith("hi") ? "समय" : "Time"}
+                    </p>
+
+                    <p className="mt-1 text-lg font-semibold">
+                      {new Date(
+                        todayHearings[0].hearingDate,
+                      ).toLocaleTimeString(
+                        i18n.language.startsWith("hi") ? "hi-IN" : "en-IN",
+                        { hour: "2-digit", minute: "2-digit" },
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
+                    <p className="text-xs uppercase tracking-wide text-blue-100">
+                      {i18n.language.startsWith("hi") ? "न्यायालय" : "Court"}
+                    </p>
+
+                    <p className="mt-1 text-lg font-semibold">
+                      {legalText(todayHearings[0].court)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-white/10 p-4 backdrop-blur">
+                    <p className="text-xs uppercase tracking-wide text-blue-100">
+                      {i18n.language.startsWith("hi") ? "चरण" : "Stage"}
+                    </p>
+
+                    <p className="mt-1 text-lg font-semibold">
+                      {legalText(todayHearings[0].stage)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-white/20 pt-5">
+                  <div className="flex items-center gap-2 text-blue-100">
+                    <Clock size={18} />
+                    {timeRemaining(todayHearings[0].hearingDate)}
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      navigate(`/matters/${todayHearings[0].matterId}`)
+                    }
+                    className="rounded-lg bg-white px-5 py-3 font-semibold text-blue-700 transition hover:bg-blue-50"
+                  >
+                    {i18n.language.startsWith("hi")
+                      ? "मामला खोलें"
+                      : "Open Matter"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-xl bg-white/10 p-6 text-center text-blue-100">
+                {i18n.language.startsWith("hi")
+                  ? "आज आपकी कोई सुनवाई निर्धारित नहीं है।"
+                  : "You're clear for today."}
+              </div>
+            )}
           </div>
 
           {/* Cause List */}
