@@ -79,7 +79,8 @@ public class HearingsController : ControllerBase
                 h.HearingDate,
                 h.Stage,
                 h.JudgeName,
-                h.CourtRoom
+                h.CourtRoom,
+                IsCompleted = h.Remarks.StartsWith("[ATTENDED]")
             })
             .ToListAsync(cancellationToken);
 
@@ -192,5 +193,29 @@ public class HearingsController : ControllerBase
         };
 
         return Ok(response);
+    }
+
+    [HttpPut("{id:guid}/complete")]
+    public async Task<IActionResult> MarkAttended(
+    Guid id,
+    CancellationToken cancellationToken)
+    {
+        var hearing = await _db.Hearings
+            .Include(h => h.Matter)
+            .FirstOrDefaultAsync(h =>
+                h.Id == id &&
+                h.Matter.AdvocateId == _currentUser.UserId,
+                cancellationToken);
+
+        if (hearing == null)
+            return NotFound();
+
+        if (!hearing.Remarks.StartsWith("[ATTENDED]"))
+        {
+            hearing.Remarks = $"[ATTENDED] {hearing.Remarks}".Trim();
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Ok(new { success = true });
     }
 }
