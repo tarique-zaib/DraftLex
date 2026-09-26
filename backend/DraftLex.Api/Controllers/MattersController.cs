@@ -153,4 +153,27 @@ public class MattersController : ControllerBase
 
         return Ok(matters);
     }
+
+    [HttpGet("recent-activity")]
+    public async Task<IActionResult> GetRecentActivity(CancellationToken cancellationToken)
+    {
+        var activities = await _db.TimelineEvents
+            .Where(t => t.Matter.AdvocateId == _currentUser.UserId)
+            .Include(t => t.Matter)
+            .OrderByDescending(t => t.CreatedAt)
+            .Take(10)
+            .Select(t => new
+            {
+                t.Id,
+                Type = t.EventType,
+                t.Title,
+                t.Description,
+                t.CreatedAt,
+                MatterId = t.MatterId,
+                MatterTitle = t.Matter.Title
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(activities);
+    }
 }

@@ -65,6 +65,7 @@ export default function Dashboard() {
 
   const [todayHearings, setTodayHearings] = useState<any[]>([]);
   const [upcomingHearings, setUpcomingHearings] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   useEffect(() => {
     const onChange = (lng: string) => setLang(lng);
@@ -75,7 +76,23 @@ export default function Dashboard() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const { data } = await api.get("/Hearings/dashboard");
+        const [{ data }, { data: activity }] = await Promise.all([
+          api.get("/Hearings/dashboard"),
+          api.get("/Matters/recent-activity"),
+        ]);
+
+        setRecentActivity(activity);
+        console.log("Recent Activity:", activity);
+
+        setTodayHearings(data.today || []);
+        setUpcomingHearings(data.upcoming || []);
+
+        setStats({
+          clients: data.stats.clients,
+          matters: data.stats.activeMatters,
+          hearings: data.stats.hearings,
+          documents: data.stats.documents,
+        });
 
         setTodayHearings(data.today || []);
         setUpcomingHearings(data.upcoming || []);
@@ -132,6 +149,32 @@ export default function Dashboard() {
     const m = Math.floor((diff % 3600000) / 60000);
 
     return `${i18n.t("startsIn")} ${h}h ${m}m`;
+  }
+
+  function timeAgo(date: string) {
+    const diff = Date.now() - new Date(date).getTime();
+
+    const mins = Math.floor(diff / 60000);
+    const hrs = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (mins < 1) return i18n.language.startsWith("hi") ? "अभी" : "Just now";
+
+    if (mins < 60)
+      return i18n.language.startsWith("hi")
+        ? `${mins} मिनट पहले`
+        : `${mins} min ago`;
+
+    if (hrs < 24)
+      return i18n.language.startsWith("hi")
+        ? `${hrs} घंटे पहले`
+        : `${hrs} hour${hrs > 1 ? "s" : ""} ago`;
+
+    if (days === 1) return i18n.language.startsWith("hi") ? "कल" : "Yesterday";
+
+    return i18n.language.startsWith("hi")
+      ? `${days} दिन पहले`
+      : `${days} days ago`;
   }
 
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -375,6 +418,87 @@ export default function Dashboard() {
                   : "You're clear for today."}
               </div>
             )}
+          </div>
+
+          {/* Recent Activity */}
+          <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {i18n.language.startsWith("hi")
+                    ? "हाल की गतिविधियाँ"
+                    : "Recent Activity"}
+                </h2>
+
+                <p className="text-sm text-slate-500">
+                  {i18n.language.startsWith("hi")
+                    ? "आपके हाल के केस अपडेट"
+                    : "Your latest case updates"}
+                </p>
+              </div>
+
+              <Clock className="text-blue-600" size={28} />
+            </div>
+
+            <div className="space-y-3">
+              {recentActivity.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-slate-500">
+                  {i18n.language.startsWith("hi")
+                    ? "कोई गतिविधि नहीं"
+                    : "No recent activity"}
+                </div>
+              ) : (
+                recentActivity.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => navigate(`/matters/${item.matterId}`)}
+                    className="flex w-full items-start gap-4 rounded-xl border border-slate-200 p-4 text-left transition hover:border-blue-300 hover:bg-slate-50"
+                  >
+                    <div
+                      className={`rounded-full p-3 ${
+                        item.type === "Document"
+                          ? "bg-blue-100 text-blue-700"
+                          : item.type === "Hearing"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-purple-100 text-purple-700"
+                      }`}
+                    >
+                      {item.type === "Document" ? (
+                        <FileText size={20} />
+                      ) : item.type === "Hearing" ? (
+                        <CalendarDays size={20} />
+                      ) : (
+                        <Scale size={20} />
+                      )}
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="font-semibold text-slate-900">
+                          {legalText(item.title)}
+                        </h3>
+
+                        <span className="text-xs text-slate-400">
+                          {timeAgo(item.createdAt)}
+                        </span>
+                      </div>
+
+                      <p className="mt-1 text-sm text-slate-600">
+                        {item.description
+                          ? legalText(item.description)
+                          : item.type === "Hearing"
+                            ? `${legalText(item.title)} • ${legalText(item.matterTitle)}`
+                            : legalText(item.matterTitle)}
+                      </p>
+
+                      <p className="mt-2 text-xs text-slate-400">
+                        {legalText(item.matterTitle)}
+                      </p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
           </div>
 
           {/* Cause List */}
