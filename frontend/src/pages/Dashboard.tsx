@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { ReactNode } from "react";
 import {
   Users,
@@ -12,6 +12,8 @@ import {
   Landmark,
   User,
   Gavel,
+  Bell,
+  CheckCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/client";
@@ -67,10 +69,29 @@ export default function Dashboard() {
   const [upcomingHearings, setUpcomingHearings] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [readIds, setReadIds] = useState<string[]>([]);
+  const notificationRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const onChange = (lng: string) => setLang(lng);
     i18n.on("languageChanged", onChange);
     return () => i18n.off("languageChanged", onChange);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(e.target as Node)
+      ) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handler);
+
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   useEffect(() => {
@@ -177,6 +198,10 @@ export default function Dashboard() {
       : `${days} days ago`;
   }
 
+  const unreadCount = recentActivity.filter(
+    (a) => !readIds.includes(a.id),
+  ).length;
+
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const weeklyData = weekDays.map((day, index) => ({
@@ -216,8 +241,127 @@ export default function Dashboard() {
                 + {i18n.t("generateDraft")}
               </button>
 
-              <LanguageToggle />
+              {/* Notification Center */}
+              <div className="relative" ref={notificationRef}>
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:bg-slate-50"
+                >
+                  <Bell size={20} />
 
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <div className="absolute right-0 z-50 mt-3 w-96 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="flex items-center justify-between border-b px-4 py-3">
+                      <div>
+                        <h3 className="font-semibold text-slate-900">
+                          {i18n.language.startsWith("hi")
+                            ? "सूचनाएँ"
+                            : "Notifications"}
+                        </h3>
+
+                        <p className="text-xs text-slate-500">
+                          {unreadCount}{" "}
+                          {i18n.language.startsWith("hi")
+                            ? "नई गतिविधियाँ"
+                            : "new updates"}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          setReadIds(recentActivity.map((a) => a.id))
+                        }
+                        className="rounded-lg p-2 text-blue-600 hover:bg-blue-50"
+                        title={
+                          i18n.language.startsWith("hi")
+                            ? "सभी पढ़ें"
+                            : "Mark all as read"
+                        }
+                      >
+                        <CheckCheck size={18} />
+                      </button>
+                    </div>
+
+                    <div className="max-h-96 overflow-y-auto">
+                      {recentActivity.length === 0 ? (
+                        <div className="p-6 text-center text-slate-500">
+                          {i18n.language.startsWith("hi")
+                            ? "कोई सूचना नहीं"
+                            : "No notifications"}
+                        </div>
+                      ) : (
+                        recentActivity.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setReadIds((prev) =>
+                                prev.includes(item.id)
+                                  ? prev
+                                  : [...prev, item.id],
+                              );
+                              setShowNotifications(false);
+                              navigate(`/matters/${item.matterId}`);
+                            }}
+                            className={`flex w-full items-start gap-3 border-b p-4 text-left transition hover:bg-slate-50 ${
+                              readIds.includes(item.id)
+                                ? "bg-white"
+                                : "bg-blue-50"
+                            }`}
+                          >
+                            <div
+                              className={`mt-1 rounded-full p-2 ${
+                                item.type === "Document"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : item.type === "Hearing"
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-purple-100 text-purple-700"
+                              }`}
+                            >
+                              {item.type === "Document" ? (
+                                <FileText size={16} />
+                              ) : item.type === "Hearing" ? (
+                                <CalendarDays size={16} />
+                              ) : (
+                                <Scale size={16} />
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="truncate font-medium text-slate-900">
+                                  {legalText(item.title)}
+                                </p>
+
+                                {!readIds.includes(item.id) && (
+                                  <span className="h-2 w-2 rounded-full bg-blue-600" />
+                                )}
+                              </div>
+
+                              <p className="mt-1 text-sm text-slate-600">
+                                {item.description
+                                  ? legalText(item.description)
+                                  : legalText(item.matterTitle)}
+                              </p>
+
+                              <p className="mt-1 text-xs text-slate-400">
+                                {timeAgo(item.createdAt)}
+                              </p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <LanguageToggle />
               <UserMenu />
             </div>
           </div>
