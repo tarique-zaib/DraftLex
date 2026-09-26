@@ -24,26 +24,6 @@ import { legalText } from "../utils/legalTranslations";
 import i18n from "../i18n";
 import api from "../api/client";
 
-function Info({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div>
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        {label}
-      </div>
-
-      <div className="mt-1 text-lg font-semibold text-slate-900">
-        {value || "-"}
-      </div>
-    </div>
-  );
-}
-
-const timelineIcons: Record<string, any> = {
-  Matter: Scale,
-  Hearing: CalendarDays,
-  Document: FileText,
-  AI: Sparkles,
-};
 
 function formatTimelineDate(date: string) {
   const d = new Date(date);
@@ -91,6 +71,10 @@ export default function MatterWorkspace() {
   const [editCourt, setEditCourt] = useState("");
   const [editMatterType, setEditMatterType] = useState("");
   const [editStatus, setEditStatus] = useState("");
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const [caseSummary, setCaseSummary] = useState<{
     summary: string;
@@ -171,6 +155,47 @@ export default function MatterWorkspace() {
           ? "मामला अपडेट नहीं हो सका।"
           : "Failed to update matter.",
       );
+    }
+  };
+
+  const uploadEvidence = async () => {
+    if (!id || !selectedFile) return;
+
+    try {
+      setUploading(true);
+      setUploadProgress(0);
+
+      const formData = new FormData();
+      formData.append("matterId", id);
+      formData.append("file", selectedFile);
+
+      await api.post("/Documents/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        onUploadProgress: (progressEvent) => {
+          if (!progressEvent.total) return;
+
+          setUploadProgress(
+            Math.round((progressEvent.loaded * 100) / progressEvent.total),
+          );
+        },
+      });
+
+      // Refresh evidence list
+      const docs = await getDocumentsByMatter(id);
+      setDocuments(docs);
+
+      setSelectedFile(null);
+      setUploadProgress(0);
+      setShowUploadModal(false);
+    } catch (err) {
+      console.error(err);
+      alert(
+        i18n.language.startsWith("hi") ? "अपलोड विफल हुआ।" : "Upload failed.",
+      );
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -882,29 +907,71 @@ export default function MatterWorkspace() {
               <button onClick={() => setShowUploadModal(false)}>✕</button>
             </div>
 
-            <p className="mb-6 text-slate-600">
-              {i18n.language.startsWith("hi")
-                ? "इस मामले के लिए दस्तावेज़ पृष्ठ पर जाएँ।"
-                : "Continue to the Documents page to upload evidence for this matter."}
-            </p>
+            <div className="space-y-5">
+              <label className="block cursor-pointer rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 p-8 text-center transition hover:border-blue-500 hover:bg-blue-100">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.jpg,.jpeg,.png,.docx"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                />
 
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowUploadModal(false)}
-                className="rounded-lg border border-slate-300 px-4 py-2"
-              >
-                {i18n.t("cancel")}
-              </button>
+                <Upload className="mx-auto mb-3 text-blue-600" size={36} />
 
-              <button
-                onClick={() => {
-                  setShowUploadModal(false);
-                  navigate("/documents");
-                }}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-              >
-                {i18n.t("continue")}
-              </button>
+                <p className="font-medium text-slate-800">
+                  {selectedFile
+                    ? selectedFile.name
+                    : i18n.language.startsWith("hi")
+                      ? "फ़ाइल चुनें"
+                      : "Choose a file"}
+                </p>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  PDF • JPG • PNG • DOCX (20 MB)
+                </p>
+              </label>
+
+              {uploading && (
+                <div>
+                  <div className="mb-2 flex justify-between text-sm">
+                    <span>
+                      {i18n.language.startsWith("hi")
+                        ? "अपलोड हो रहा है..."
+                        : "Uploading..."}
+                    </span>
+
+                    <span>{uploadProgress}%</span>
+                  </div>
+
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className="h-full rounded-full bg-blue-600 transition-all"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setSelectedFile(null);
+                    setUploadProgress(0);
+                    setShowUploadModal(false);
+                  }}
+                  className="rounded-lg border border-slate-300 px-4 py-2"
+                >
+                  {i18n.t("cancel")}
+                </button>
+
+                <button
+                  onClick={uploadEvidence}
+                  disabled={!selectedFile || uploading}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                >
+                  {uploading ? `${uploadProgress}%` : "Upload"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -12,8 +12,9 @@ using DraftLex.Infrastructure.Security;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
-
+using Microsoft.Extensions.FileProviders;
 using Microsoft.OpenApi;
 using System.Text;
 
@@ -137,6 +138,18 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+var evidencePath = Path.Combine(
+    Directory.GetCurrentDirectory(),
+    "uploads");
+
+Directory.CreateDirectory(evidencePath);
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(evidencePath),
+    RequestPath = "/uploads"
+});
 
 app.UseMiddleware<ExceptionMiddleware>();
 

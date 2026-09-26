@@ -13,7 +13,7 @@ import {
   User,
   Gavel,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import UserMenu from "../components/UserMenu";
 import Sidebar from "../components/Sidebar";

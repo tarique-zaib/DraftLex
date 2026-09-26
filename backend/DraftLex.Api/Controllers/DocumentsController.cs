@@ -3,11 +3,12 @@ using DraftLex.Application.Features.Documents;
 using DraftLex.Application.Features.Documents.DTOs;
 using DraftLex.Application.Interfaces;
 using DraftLex.Application.Services;
+using DraftLex.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-
 namespace DraftLex.Api.Controllers;
 
 [ApiController]
@@ -178,4 +179,77 @@ public class DocumentsController : ControllerBase
             "application/pdf",
             $"{document.Title}.pdf");
     }
+
+    [HttpPost("upload")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Upload([FromForm] UploadEvidenceRequest request)
+    {
+        if (request.File == null || request.File.Length == 0)
+            return BadRequest("No file selected.");
+
+        const long maxSize = 20 * 1024 * 1024;
+
+        if (request.File.Length > maxSize)
+            return BadRequest("Maximum file size is 20 MB.");
+
+        var allowed = new[] { ".pdf", ".jpg", ".jpeg", ".png", ".docx" };
+
+        var extension = Path.GetExtension(request.File.FileName).ToLowerInvariant();
+
+        if (!allowed.Contains(extension))
+            return BadRequest("Unsupported file type.");
+
+        var matter = await _db.Matters
+            .Include(m => m.Client)
+            .FirstOrDefaultAsync(m => m.Id == request.MatterId);
+
+        if (matter == null)
+            return NotFound("Matter not found.");
+
+        var uploadsRoot = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "uploads",
+            "evidence");
+
+        Directory.CreateDirectory(uploadsRoot);
+
+        var fileName = $"{Guid.NewGuid()}{extension}";
+        var filePath = Path.Combine(uploadsRoot, fileName);
+
+        await using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await request.File.CopyToAsync(stream);
+        }
+
+        var document = new LegalDocument
+        {
+            Id = Guid.NewGuid(),
+            MatterId = request.MatterId,
+            Title = Path.GetFileNameWithoutExtension(request.File.FileName),
+            DocumentType = "Evidence",
+            Content = fileName,
+            Status = "Uploaded",
+            Version = 1,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _db.LegalDocuments.Add(document);
+        await _db.SaveChangesAsync();
+
+        return Ok(new
+        {
+            document.Id,
+            document.Title,
+            document.DocumentType,
+            document.Status
+        });
+    }
+}
+
+
+public class UploadEvidenceRequest
+{
+    public Guid MatterId { get; set; }
+    public IFormFile File { get; set; } = default!;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Save, CheckCircle, ArrowLeft } from "lucide-react";
+import { Save, CheckCircle, ArrowLeft, FileText } from "lucide-react";
 import { marked } from "marked";
 
 import api from "../api/client";
@@ -25,13 +25,22 @@ interface Document {
 export default function DocumentViewer() {
   const { id } = useParams();
 
-  const [document, setDocument] = useState<Document | null>(null);  
+  const [document, setDocument] = useState<Document | null>(null);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const firstLoad = useRef(true);
+
+  const isEvidence = document?.documentType === "Evidence";
+
+  const cleanFileName = document?.content?.replace(/<[^>]*>/g, "").trim();
+
+  const evidenceUrl =
+    document && isEvidence
+      ? `${api.defaults.baseURL?.replace("/api", "")}/uploads/evidence/${cleanFileName}`
+      : "";
 
   useEffect(() => {
     loadDocument();
@@ -55,7 +64,11 @@ export default function DocumentViewer() {
       const { data } = await api.get<Document>(`/Documents/${id}`);
 
       setDocument(data);
-      setContent(marked.parse(data.content) as string);
+      if (data.documentType === "Evidence") {
+        setContent(data.content);
+      } else {
+        setContent(marked.parse(data.content) as string);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -166,14 +179,50 @@ export default function DocumentViewer() {
           </div>
 
           {/* Editor */}
-          <LegalEditor
-            content={content}
-            onChange={setContent}
-            title={document.documentType}
-            matterTitle={document.matterTitle}
-            court={document.court}
-            client={document.clientName}
-          />
+          {isEvidence ? (
+            <div className="rounded-xl bg-white p-6 shadow-sm">
+              {cleanFileName?.toLowerCase().endsWith(".pdf") ? (
+                <iframe
+                  src={evidenceUrl}
+                  title={document.title}
+                  className="h-[800px] w-full rounded-lg border"
+                />
+              ) : /\.(jpg|jpeg|png)$/i.test(cleanFileName ?? "") ? (
+                <img
+                  src={evidenceUrl}
+                  alt={document.title}
+                  className="mx-auto max-h-[800px] rounded-lg border"
+                />
+              ) : (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center">
+                  <FileText size={48} className="mx-auto mb-3 text-blue-600" />
+                  <p className="font-medium">{document.title}</p>
+                  <p className="mt-2 text-sm text-slate-500">
+                    DOCX files cannot be previewed in the browser.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-4 flex justify-end">
+                <a
+                  href={evidenceUrl}
+                  download={document.title}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                >
+                  Download Evidence
+                </a>
+              </div>
+            </div>
+          ) : (
+            <LegalEditor
+              content={content}
+              onChange={setContent}
+              title={document.documentType}
+              matterTitle={document.matterTitle}
+              court={document.court}
+              client={document.clientName}
+            />
+          )}
         </main>
       </div>
     </div>
