@@ -245,6 +245,32 @@ public class DocumentsController : ControllerBase
             document.Status
         });
     }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var document = await _db.LegalDocuments.FindAsync(id);
+
+        if (document == null)
+            return NotFound();
+
+        if (document.DocumentType == "Evidence")
+        {
+            var path = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "uploads",
+                "evidence",
+                document.Content.Replace("<p>", "").Replace("</p>", "").Trim());
+
+            if (System.IO.File.Exists(path))
+                System.IO.File.Delete(path);
+        }
+
+        _db.LegalDocuments.Remove(document);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
 }
 
 

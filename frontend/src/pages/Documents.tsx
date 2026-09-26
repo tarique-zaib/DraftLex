@@ -15,6 +15,8 @@ interface DocumentItem {
   updatedAt: string;
   matterId?: string;
   matterTitle?: string;
+  content: string;
+  status: string;
 }
 
 export default function Documents() {

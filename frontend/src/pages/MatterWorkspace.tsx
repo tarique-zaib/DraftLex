@@ -14,6 +14,12 @@ import {
   ShieldAlert,
   RefreshCw,
   Circle,
+  ImageIcon,
+  FileBadge,
+  File,
+  Download,
+  Trash2,
+  Eye,
 } from "lucide-react";
 
 import { getMatter } from "../api/matters";
@@ -23,7 +29,6 @@ import CopilotPanel from "../components/CopilotPanel";
 import { legalText } from "../utils/legalTranslations";
 import i18n from "../i18n";
 import api from "../api/client";
-
 
 function formatTimelineDate(date: string) {
   const d = new Date(date);
@@ -198,6 +203,50 @@ export default function MatterWorkspace() {
       setUploading(false);
     }
   };
+
+  const deleteEvidence = async (documentId: string) => {
+    if (
+      !confirm(
+        i18n.language.startsWith("hi")
+          ? "क्या आप यह साक्ष्य हटाना चाहते हैं?"
+          : "Delete this evidence?",
+      )
+    )
+      return;
+
+    try {
+      await api.delete(`/Documents/${documentId}`);
+
+      if (!id) return;
+
+      const docs = await getDocumentsByMatter(id);
+      setDocuments(docs);
+    } catch (err) {
+      console.error(err);
+      alert(
+        i18n.language.startsWith("hi")
+          ? "हटाया नहीं जा सका।"
+          : "Delete failed.",
+      );
+    }
+  };
+
+  const getFileIcon = (name: string) => {
+    const ext = name.split(".").pop()?.toLowerCase();
+
+    if (ext === "pdf") return <FileText className="text-red-600" size={28} />;
+
+    if (["jpg", "jpeg", "png"].includes(ext || ""))
+      return <ImageIcon className="text-blue-600" size={28} />;
+
+    if (ext === "docx")
+      return <FileBadge className="text-indigo-600" size={28} />;
+
+    return <File className="text-slate-600" size={28} />;
+  };
+
+  const fileUrl = (content: string) =>
+    `${api.defaults.baseURL?.replace("/api", "")}/uploads/evidence/${content.replace(/<[^>]*>/g, "").trim()}`;
 
   useEffect(() => {
     const handler = (lng: string) => setLang(lng);
@@ -719,36 +768,72 @@ export default function MatterWorkspace() {
                   documents.map((d) => (
                     <div
                       key={d.id}
-                      className="rounded-lg border border-slate-200 p-4 transition hover:bg-slate-50"
+                      className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow-md"
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold">{d.title}</p>
+                      <div className="flex items-start justify-between">
+                        {/* Left */}
+                        <div className="flex gap-4">
+                          <div className="rounded-lg bg-slate-100 p-3">
+                            {getFileIcon(d.content)}
+                          </div>
 
-                          <p className="text-sm text-slate-500">
-                            {i18n.t("version")} {d.version} • {d.documentType}
-                          </p>
+                          <div>
+                            <h3 className="font-semibold text-slate-900">
+                              {d.title}
+                            </h3>
 
-                          <p className="text-xs text-slate-400">
-                            {new Date(d.updatedAt).toLocaleDateString(
-                              i18n.language.startsWith("hi")
-                                ? "hi-IN"
-                                : "en-IN",
-                              {
-                                day: "2-digit",
-                                month: "long",
-                                year: "numeric",
-                              },
+                            <p className="text-sm text-slate-500">
+                              {i18n.t("version")} {d.version} • {d.documentType}
+                            </p>
+
+                            <p className="text-xs text-slate-400">
+                              {new Date(d.updatedAt).toLocaleDateString(
+                                i18n.language.startsWith("hi")
+                                  ? "hi-IN"
+                                  : "en-IN",
+                                {
+                                  day: "2-digit",
+                                  month: "long",
+                                  year: "numeric",
+                                },
+                              )}
+                            </p>
+
+                            {d.matterTitle && (
+                              <span className="mt-2 inline-block rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">
+                                {d.matterTitle}
+                              </span>
                             )}
-                          </p>
+                          </div>
                         </div>
 
-                        <button
-                          onClick={() => navigate(`/documents/${d.id}`)}
-                          className="rounded-lg border px-3 py-1 text-sm hover:bg-slate-100"
-                        >
-                          {i18n.t("open")}
-                        </button>
+                        {/* Right */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => navigate(`/documents/${d.id}`)}
+                            className="rounded-lg p-2 hover:bg-slate-100"
+                            title="Preview"
+                          >
+                            <Eye size={18} />
+                          </button>
+
+                          <a
+                            href={fileUrl(d.content)}
+                            download={d.title}
+                            className="rounded-lg p-2 hover:bg-slate-100"
+                            title="Download"
+                          >
+                            <Download size={18} />
+                          </a>
+
+                          <button
+                            onClick={() => deleteEvidence(d.id)}
+                            className="rounded-lg p-2 text-red-600 hover:bg-red-50"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))
