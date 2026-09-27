@@ -50,6 +50,9 @@ const hiMap: Record<string, string> = {
   Document: "दस्तावेज़",
   Hearing: "सुनवाई",
   MatterCreated: "मामला पंजीकृत",
+  "Notice Issued": "नोटिस जारी",
+  "Evidence Submission": "साक्ष्य प्रस्तुत",
+  "Cross Examination": "जिरह",
 };
 
 export function legalText(value?: string) {
