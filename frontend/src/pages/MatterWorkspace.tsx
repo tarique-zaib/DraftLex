@@ -321,8 +321,27 @@ export default function MatterWorkspace() {
     );
   }
 
-  const progress =
-    matter.status === "Closed" ? 100 : matter.status === "Active" ? 65 : 35;
+  // Get the latest hearing stage
+  const latestHearing = [...hearings].sort(
+    (a, b) =>
+      new Date(b.hearingDate).getTime() - new Date(a.hearingDate).getTime(),
+  )[0];
+
+  const currentStage = latestHearing?.stage ?? matter.status;
+
+  const progressMap: Record<string, number> = {
+    Filed: 10,
+    "Notice Issued": 25,
+    "Reply Filed": 40,
+    Evidence: 55,
+    "Cross Examination": 70,
+    "Final Arguments": 90,
+    "Judgment Reserved": 95,
+    Disposed: 100,
+    Closed: 100,
+  };
+
+  const progress = progressMap[currentStage] ?? 15;
 
   return (
     <div className="min-h-screen bg-slate-100 p-8">
