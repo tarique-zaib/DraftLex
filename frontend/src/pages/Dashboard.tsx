@@ -245,7 +245,7 @@ export default function Dashboard() {
               </button>
 
               {/* Notification Center */}
-              <div className="relative" ref={notificationRef}>
+              <div className="relative shrink-0" ref={notificationRef}>
                 <button
                   onClick={() => setShowNotifications(!showNotifications)}
                   className="relative rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:bg-slate-50"
@@ -260,7 +260,7 @@ export default function Dashboard() {
                 </button>
 
                 {showNotifications && (
-                  <div className="absolute right-0 z-50 mt-3 w-80 max-w-[90vw] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:w-96">
+                  <div className="fixed left-4 right-4 top-24 z-50 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-3 sm:w-96">
                     <div className="flex items-center justify-between border-b px-4 py-3">
                       <div>
                         <h3 className="font-semibold text-slate-900">
