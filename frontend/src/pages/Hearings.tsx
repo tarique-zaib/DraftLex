@@ -34,7 +34,7 @@ export default function Hearings() {
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [completedIds, setCompletedIds] = useState<string[]>([]);
+  const [completedIds] = useState<string[]>([]);
 
   const startOfMonth = new Date(
     currentMonth.getFullYear(),

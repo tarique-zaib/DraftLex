@@ -59,9 +59,12 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        policy
+            .SetIsOriginAllowed(origin =>
+                origin == "http://localhost:5173" ||
+                origin.StartsWith("https://") && origin.Contains(".devtunnels.ms"))
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 

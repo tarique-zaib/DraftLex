@@ -219,24 +219,27 @@ export default function Dashboard() {
       <div className="flex">
         <Sidebar />
 
-        <main className="flex-1 p-8">
+        <main className="flex-1 bg-slate-100 p-4 pt-24 lg:p-8 lg:pt-8">
           {/* Header */}
 
-          <div className="mb-8 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">
+          {/* Header */}
+          <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            {/* Left */}
+            <div className="min-w-0 flex-1">
+              <h1 className="text-3xl font-bold leading-tight text-slate-900 sm:text-4xl">
                 {i18n.t("welcome", { name: displayName })}
               </h1>
 
-              <p className="text-slate-500">
+              <p className="mt-2 text-slate-500">
                 {i18n.t("manageClientsMattersAiDrafts")}
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Right */}
+            <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 lg:w-auto lg:flex-nowrap lg:justify-end">
               <button
+                className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 sm:w-auto"
                 onClick={() => navigate("/ai-drafts")}
-                className="rounded-lg bg-blue-600 px-5 py-3 font-medium text-white transition hover:bg-blue-700"
               >
                 + {i18n.t("generateDraft")}
               </button>
@@ -245,7 +248,7 @@ export default function Dashboard() {
               <div className="relative" ref={notificationRef}>
                 <button
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:bg-slate-50"
+                  className="relative rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:bg-slate-50"
                 >
                   <Bell size={20} />
 
@@ -257,7 +260,7 @@ export default function Dashboard() {
                 </button>
 
                 {showNotifications && (
-                  <div className="absolute right-0 z-50 mt-3 w-96 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                  <div className="absolute right-0 z-50 mt-3 w-80 max-w-[90vw] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:w-96">
                     <div className="flex items-center justify-between border-b px-4 py-3">
                       <div>
                         <h3 className="font-semibold text-slate-900">
@@ -279,11 +282,6 @@ export default function Dashboard() {
                           setReadIds(recentActivity.map((a) => a.id))
                         }
                         className="rounded-lg p-2 text-blue-600 hover:bg-blue-50"
-                        title={
-                          i18n.language.startsWith("hi")
-                            ? "सभी पढ़ें"
-                            : "Mark all as read"
-                        }
                       >
                         <CheckCheck size={18} />
                       </button>
@@ -361,8 +359,12 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
+
               <LanguageToggle />
-              <UserMenu />
+
+              <div className="min-w-fit">
+                <UserMenu />
+              </div>
             </div>
           </div>
 
@@ -673,7 +675,7 @@ export default function Dashboard() {
                       onClick={() => navigate(`/matters/${h.matterId}`)}
                       className="w-full rounded-xl border border-slate-200 p-4 text-left transition hover:border-blue-400 hover:bg-blue-50"
                     >
-                      <div className="flex items-start justify-between">
+                      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div>
                           <p className="text-lg font-bold text-slate-900">
                             {legalText(h.matterTitle)}
