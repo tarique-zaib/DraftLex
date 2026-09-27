@@ -25,23 +25,39 @@ public class CreateMatterCommandHandler : IRequestHandler<CreateMatterCommand, G
         if (!clientExists)
             throw new ArgumentException("Client not found.");
 
-        var count = await _db.Matters.CountAsync(cancellationToken);
+        // Generate next unique Matter Number
+        var year = DateTime.UtcNow.Year;
+
+        var lastMatterNumber = await _db.Matters
+            .Where(m => m.MatterNumber.StartsWith($"MAT-{year}-"))
+            .OrderByDescending(m => m.MatterNumber)
+            .Select(m => m.MatterNumber)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        int nextNumber = 1;
+
+        if (!string.IsNullOrWhiteSpace(lastMatterNumber))
+        {
+            var lastPart = lastMatterNumber.Split('-').Last();
+
+            if (int.TryParse(lastPart, out var sequence))
+                nextNumber = sequence + 1;
+        }
+
+        var matterNumber = $"MAT-{year}-{nextNumber:D6}";
 
         var matter = new Matter
         {
             Id = Guid.NewGuid(),
-            MatterNumber = $"MAT-{DateTime.UtcNow.Year}-{count + 1:D6}",
+            MatterNumber = matterNumber,
             ClientId = request.ClientId,
             Title = request.Title,
             MatterType = request.MatterType,
             Court = request.Court,
             CaseNumber = request.CaseNumber,
             JudgeName = request.JudgeName,
-
-            // NEW
             OppositePartyName = request.OppositePartyName,
             OppositePartyAddress = request.OppositePartyAddress,
-
             Status = "Active",
             CreatedAt = DateTime.UtcNow,
             AdvocateId = _currentUser.UserId
@@ -49,7 +65,6 @@ public class CreateMatterCommandHandler : IRequestHandler<CreateMatterCommand, G
 
         _db.Matters.Add(matter);
 
-        // Automatically create timeline event
         _db.TimelineEvents.Add(new TimelineEvent
         {
             Id = Guid.NewGuid(),
