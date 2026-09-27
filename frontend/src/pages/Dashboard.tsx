@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import type { ReactNode } from "react";
 import {
   Users,
@@ -202,15 +202,39 @@ export default function Dashboard() {
     (a) => !readIds.includes(a.id),
   ).length;
 
-  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  console.log("Upcoming Hearings:", upcomingHearings);
 
-  const weeklyData = weekDays.map((day, index) => ({
-    day,
-    count: upcomingHearings.filter((h) => {
-      const d = new Date(h.hearingDate);
-      return d.getDay() === index;
-    }).length,
-  }));
+  const weeklyData = useMemo(() => {
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+
+    const allHearings = [...todayHearings, ...upcomingHearings];
+
+    const startOfWeek = new Date();
+    startOfWeek.setHours(0, 0, 0, 0);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Sunday
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+    allHearings.forEach((h: any) => {
+      const hearingDate = new Date(h.hearingDate);
+      hearingDate.setHours(0, 0, 0, 0);
+
+      if (hearingDate >= startOfWeek && hearingDate < endOfWeek) {
+        counts[hearingDate.getDay()]++;
+      }
+    });
+
+    return [
+      { day: "Sun", count: counts[0] },
+      { day: "Mon", count: counts[1] },
+      { day: "Tue", count: counts[2] },
+      { day: "Wed", count: counts[3] },
+      { day: "Thu", count: counts[4] },
+      { day: "Fri", count: counts[5] },
+      { day: "Sat", count: counts[6] },
+    ];
+  }, [todayHearings, upcomingHearings]);
 
   const maxCount = Math.max(...weeklyData.map((d) => d.count), 1);
 
@@ -453,7 +477,7 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-4">
-              {weeklyData.map((item) => (
+              {weeklyData.map((item: { day: string; count: number }) => (
                 <div key={item.day} className="flex items-center gap-4">
                   <div className="w-10 text-sm font-medium text-slate-600">
                     {item.day}
