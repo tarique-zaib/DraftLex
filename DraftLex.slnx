@@ -1,4 +1,14 @@
 <Solution>
+  <Folder Name="/docs/">
+    <File Path="architecture.md" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="ACHIEVEMENTS.md" />
+    <File Path="CHANGELOG.md" />
+    <File Path="INTERVIEW_GUIDE.md" />
+    <File Path="QA_CHECKLIST.md" />
+    <File Path="README.md" />
+  </Folder>
   <Project Path="backend/DraftLex.Api/DraftLex.Api.csproj" />
   <Project Path="backend/DraftLex.Application/DraftLex.Application.csproj" />
   <Project Path="backend/DraftLex.Domain/DraftLex.Domain.csproj" />
