@@ -1,6 +1,7 @@
 ﻿using DraftLex.Application.Features.AI.GenerateAffidavit;
 using DraftLex.Application.Features.AI.GenerateArguments;
 using DraftLex.Application.Features.AI.GenerateCaseSummary;
+using DraftLex.Application.Features.AI.GetMatterContext;
 using DraftLex.Application.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -62,6 +63,17 @@ public class AIController : ControllerBase
             return NotFound();
 
         var result = await _mediator.Send(new GenerateAffidavitQuery(matterId));
+        return Ok(result);
+    }
+
+    [HttpGet("matter-context/{matterId:guid}")]
+    public async Task<IActionResult> GetMatterContext(Guid matterId)
+    {
+        var result = await _mediator.Send(new GetMatterContextQuery(matterId));
+
+        if (result == null)
+            return NotFound();
+
         return Ok(result);
     }
 }

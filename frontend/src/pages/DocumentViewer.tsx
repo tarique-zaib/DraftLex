@@ -162,12 +162,43 @@ export default function DocumentViewer() {
               )}
 
               <button
-                onClick={() => {
-                  const apiBase =
-                    api.defaults.baseURL?.replace(/\/$/, "") ||
-                    `${window.location.origin}/api`;
+                type="button"
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
 
-                  window.open(`${apiBase}/Documents/${id}/pdf`, "_blank");
+                  try {
+                    const token = localStorage.getItem("draftlex_token");
+
+                    const response = await fetch(
+                      `${api.defaults.baseURL}/Documents/${id}/pdf`,
+                      {
+                        method: "GET",
+                        headers: {
+                          Authorization: `Bearer ${token}`,
+                        },
+                      },
+                    );
+
+                    if (!response.ok)
+                      throw new Error(`HTTP ${response.status}`);
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+
+                    const link = window.document.createElement("a");
+                    link.href = url;
+                    link.download = `${document?.title || "DraftLex-Document"}.pdf`;
+
+                    window.document.body.appendChild(link);
+                    link.click();
+                    window.document.body.removeChild(link);
+
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error("PDF export failed", err);
+                    alert("Unable to export PDF.");
+                  }
                 }}
                 className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
               >

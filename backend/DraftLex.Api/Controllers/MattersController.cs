@@ -4,6 +4,7 @@ using DraftLex.Application.Features.Matters.GetById;
 using DraftLex.Application.Features.Timeline.GetByMatter;
 using DraftLex.Application.Interfaces;
 using DraftLex.Application.Services;
+using DraftLex.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -89,6 +90,17 @@ public class MattersController : ControllerBase
         matter.MatterType = request.MatterType;
         matter.Status = request.Status;
 
+        _db.TimelineEvents.Add(new TimelineEvent
+        {
+            Id = Guid.NewGuid(),
+            MatterId = matter.Id,
+            EventType = "MatterUpdated",
+            Title = "Matter Updated",
+            Description = $"Matter '{matter.Title}' was updated.",
+            EventDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            CreatedAt = DateTime.UtcNow
+        });
+
         await _db.SaveChangesAsync(cancellationToken);
 
         return Ok(new
@@ -170,7 +182,15 @@ public class MattersController : ControllerBase
                 t.Description,
                 t.CreatedAt,
                 MatterId = t.MatterId,
-                MatterTitle = t.Matter.Title
+                MatterTitle = t.Matter.Title,
+                Icon =
+        t.EventType == "MatterCreated" ? "scale" :
+        t.EventType == "MatterUpdated" ? "edit" :
+        t.EventType == "DocumentGenerated" ? "file-text" :
+        t.EventType == "HearingCreated" ? "calendar-plus" :
+        t.EventType == "HearingRescheduled" ? "calendar-clock" :
+        t.EventType == "HearingCompleted" ? "calendar-check" :
+        "clock"
             })
             .ToListAsync(cancellationToken);
 

@@ -131,7 +131,15 @@ export default function Dashboard() {
 
     loadDashboard();
 
-    const interval = setInterval(loadDashboard, 60000);
+    const interval = setInterval(loadDashboard, 5000);
+
+    const refreshOnFocus = () => loadDashboard();
+    window.addEventListener("focus", refreshOnFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", refreshOnFocus);
+    };
     return () => clearInterval(interval);
   }, []);
 
@@ -197,6 +205,30 @@ export default function Dashboard() {
       ? `${days} दिन पहले`
       : `${days} days ago`;
   }
+
+  const translateActivityTitle = (title: string) => {
+    if (!i18n.language.startsWith("hi")) return title;
+
+    switch (title) {
+      case "AI Draft Generated":
+        return "एआई मसौदा तैयार किया गया";
+
+      case "Document Created":
+        return "दस्तावेज़ बनाया गया";
+
+      case "Matter Updated":
+        return "मामला अद्यतन किया गया";
+
+      case "Hearing Scheduled":
+        return "सुनवाई निर्धारित की गई";
+
+      case "Hearing Completed":
+        return "सुनवाई पूरी हुई";
+
+      default:
+        return title;
+    }
+  };
 
   const unreadCount = recentActivity.filter(
     (a) => !readIds.includes(a.id),
@@ -358,7 +390,7 @@ export default function Dashboard() {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2">
                                 <p className="truncate font-medium text-slate-900">
-                                  {legalText(item.title)}
+                                  {translateActivityTitle(item.title)}
                                 </p>
 
                                 {!readIds.includes(item.id) && (
@@ -644,8 +676,12 @@ export default function Dashboard() {
 
                     <div className="flex-1">
                       <div className="flex items-center justify-between gap-3">
-                        <h3 className="font-semibold text-slate-900">
-                          {legalText(item.title)}
+                        <h3
+                          className={`font-semibold text-slate-900 ${
+                            i18n.language.startsWith("hi") ? "font-hi" : ""
+                          }`}
+                        >
+                          {translateActivityTitle(item.title)}
                         </h3>
 
                         <span className="text-xs text-slate-400">
@@ -654,11 +690,25 @@ export default function Dashboard() {
                       </div>
 
                       <p className="mt-1 text-sm text-slate-600">
-                        {item.description
-                          ? legalText(item.description)
-                          : item.type === "Hearing"
-                            ? `${legalText(item.title)} • ${legalText(item.matterTitle)}`
-                            : legalText(item.matterTitle)}
+                        {i18n.language.startsWith("hi")
+                          ? (item.description || "")
+                              .replace("created for", "तैयार किया गया:")
+                              .replace("Legal Notice", "कानूनी नोटिस")
+                              .replace("Reply Notice", "उत्तर नोटिस")
+                              .replace("Affidavit", "शपथपत्र")
+                              .replace("Plaint", "वाद पत्र")
+                              .replace("Written Statement", "लिखित बयान")
+                              .replace(
+                                "Bail Application",
+                                "जमानत प्रार्थना पत्र",
+                              )
+                              .replace("Arguments", "लिखित बहस")
+                              .replace("Case Summary", "मामले का सार")
+                          : item.description
+                            ? legalText(item.description)
+                            : item.type === "Hearing"
+                              ? `${legalText(item.title)} • ${legalText(item.matterTitle)}`
+                              : legalText(item.matterTitle)}
                       </p>
 
                       <p className="mt-2 text-xs text-slate-400">

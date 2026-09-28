@@ -1,8 +1,9 @@
 ﻿using DraftLex.Application.DTOs.Hearings;
 using DraftLex.Application.Features.Hearings.Create;
-using DraftLex.Application.Features.Hearings.GetByMatter;
 using DraftLex.Application.Features.Hearings.GetById;
+using DraftLex.Application.Features.Hearings.GetByMatter;
 using DraftLex.Application.Interfaces;
+using DraftLex.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -41,6 +42,19 @@ public class HearingsController : ControllerBase
             return NotFound();
 
         var id = await _mediator.Send(command);
+
+        _db.TimelineEvents.Add(new TimelineEvent
+        {
+            Id = Guid.NewGuid(),
+            MatterId = command.MatterId,
+            EventType = "HearingCreated",
+            Title = "Hearing Scheduled",
+            Description = $"A hearing has been scheduled.",
+            EventDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await _db.SaveChangesAsync();
 
         return Created($"/api/hearings/{id}", new { id });
     }
@@ -105,10 +119,21 @@ public class HearingsController : ControllerBase
             return NotFound();
 
         hearing.HearingDate = DateTime.SpecifyKind(
-            request.HearingDate,
-            DateTimeKind.Utc);
+    request.HearingDate,
+    DateTimeKind.Utc);
 
         hearing.Remarks = request.Remarks;
+
+        _db.TimelineEvents.Add(new TimelineEvent
+        {
+            Id = Guid.NewGuid(),
+            MatterId = hearing.MatterId,
+            EventType = "HearingRescheduled",
+            Title = "Hearing Rescheduled",
+            Description = $"Hearing moved to {request.HearingDate:dd MMM yyyy hh:mm tt}.",
+            EventDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            CreatedAt = DateTime.UtcNow
+        });
 
         await _db.SaveChangesAsync(cancellationToken);
 
@@ -213,6 +238,18 @@ public class HearingsController : ControllerBase
         if (!hearing.Remarks.StartsWith("[ATTENDED]"))
         {
             hearing.Remarks = $"[ATTENDED] {hearing.Remarks}".Trim();
+
+            _db.TimelineEvents.Add(new TimelineEvent
+            {
+                Id = Guid.NewGuid(),
+                MatterId = hearing.MatterId,
+                EventType = "HearingCompleted",
+                Title = "Hearing Completed",
+                Description = $"The hearing was marked as attended.",
+                EventDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+                CreatedAt = DateTime.UtcNow
+            });
+
             await _db.SaveChangesAsync(cancellationToken);
         }
 

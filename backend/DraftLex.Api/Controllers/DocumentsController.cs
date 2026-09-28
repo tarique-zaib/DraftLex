@@ -46,6 +46,20 @@ public class DocumentsController : ControllerBase
 
         var result = await _service.CreateAsync(request);
 
+        // Add Recent Activity entry
+        _db.TimelineEvents.Add(new TimelineEvent
+        {
+            Id = Guid.NewGuid(),
+            MatterId = request.MatterId,
+            EventType = "DocumentGenerated",
+            Title = "AI Draft Generated",
+            Description = $"{request.DocumentType} generated.",
+            EventDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await _db.SaveChangesAsync();
+
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
@@ -235,22 +249,21 @@ public class DocumentsController : ControllerBase
         };
 
         _db.LegalDocuments.Add(document);
-        await _db.SaveChangesAsync();
 
-        var eventDate = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified);
+        var eventDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         _db.TimelineEvents.Add(new TimelineEvent
         {
             Id = Guid.NewGuid(),
             MatterId = request.MatterId,
-            EventType = "Document",
-            Title = "Evidence Uploaded",
-            Description = document.Title,
-            EventDate = eventDate,          // timestamp without time zone
-            CreatedAt = DateTime.UtcNow     // timestamp with time zone
+            EventType = "DocumentGenerated",
+            Title = "AI Draft Generated",
+            Description = $"{document.DocumentType} generated.",
+            EventDate = eventDate,
+            CreatedAt = DateTime.UtcNow
         });
 
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync();        
 
         return Ok(new
         {

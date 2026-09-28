@@ -50,11 +50,11 @@ public class CreateHearingCommandHandler
         {
             Id = Guid.NewGuid(),
             MatterId = hearing.MatterId,
-            EventType = "Hearing",
-            Title = hearing.Stage,
-            Description = hearing.Remarks,
+            EventType = "HearingCreated",
+            Title = "Hearing Scheduled",
+            Description = $"A hearing has been scheduled for {hearing.HearingDate:dd MMM yyyy hh:mm tt}. Stage: {hearing.Stage}.",
 
-            // Local court time
+            // Court event time
             EventDate = DateTime.SpecifyKind(hearing.HearingDate, DateTimeKind.Unspecified),
 
             // Audit timestamp

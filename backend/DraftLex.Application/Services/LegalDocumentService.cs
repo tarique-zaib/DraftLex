@@ -50,6 +50,18 @@ public class LegalDocumentService
         };
 
         await _repo.AddAsync(document);
+
+        _db.TimelineEvents.Add(new TimelineEvent
+        {
+            Id = Guid.NewGuid(),
+            MatterId = document.MatterId,
+            EventType = "DocumentCreated",
+            Title = "Document Created",
+            Description = $"{document.DocumentType} created.",
+            EventDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            CreatedAt = DateTime.UtcNow
+        });
+
         await _repo.SaveChangesAsync();
 
         return Map(document);
@@ -120,8 +132,8 @@ public class LegalDocumentService
 
     // Generate AI Document
     public async Task<DocumentResponse> GenerateAsync(
-        GenerateDocumentRequest request,
-        string advocateName)
+    GenerateDocumentRequest request,
+    string advocateName)
     {
         var matter = await _db.Matters
             .Include(m => m.Client)
@@ -156,6 +168,19 @@ public class LegalDocumentService
         };
 
         _db.LegalDocuments.Add(document);
+
+        // ✅ Add Recent Activity entry
+        _db.TimelineEvents.Add(new TimelineEvent
+        {
+            Id = Guid.NewGuid(),
+            MatterId = matter.Id,
+            EventType = "DocumentGenerated",
+            Title = "AI Draft Generated",
+            Description = $"{request.DocumentType} created for {matter.Title}.",
+            EventDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            CreatedAt = DateTime.UtcNow
+        });
+
         await _db.SaveChangesAsync();
 
         return Map(document);

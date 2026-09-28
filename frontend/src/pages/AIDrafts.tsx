@@ -7,6 +7,42 @@ import Sidebar from "../components/Sidebar";
 import UserMenu from "../components/UserMenu";
 import ClauseLibraryModal from "../components/ClauseLibraryModal";
 
+const localizeMatterContext = (text: string, isHindi: boolean) => {
+  if (!isHindi) return text;
+
+  return text
+    .replace(/^Matter Number:/gm, "मामला संख्या:")
+    .replace(/^Case Title:/gm, "वाद शीर्षक:")
+    .replace(/^Client:/gm, "मुवक्किल:")
+    .replace(/^Court:/gm, "न्यायालय:")
+    .replace(/^Case Number:/gm, "वाद संख्या:")
+    .replace(/^Judge:/gm, "न्यायाधीश:")
+    .replace(/^Opposite Party:/gm, "विपक्षी पक्ष:")
+    .replace(/^Current Status:\s*Active$/gm, "वर्तमान स्थिति: सक्रिय")
+    .replace(/^Current Status:\s*Closed$/gm, "वर्तमान स्थिति: बंद")
+    .replace(/^Current Stage:\s*First Hearing$/gm, "वर्तमान चरण: प्रथम सुनवाई")
+    .replace(/^Current Stage:/gm, "वर्तमान चरण:")
+    .replace(/^Facts Summary:/gm, "तथ्यों का सार:")
+
+    // Full English summary → Hindi
+    .replace(
+      /This matter pertains to (.+?) before the (.+?)\.\s*The client is represented by the advocate, and the matter is presently at the (.+?) stage\./gs,
+      "यह मामला $1 से संबंधित है, जो $2 के समक्ष लंबित है। इस मामले में मुवक्किल की ओर से अधिवक्ता प्रतिनिधित्व कर रहे हैं तथा वाद वर्तमान में $3 चरण में है।"
+    )
+
+    // Fallback if only first sentence exists
+    .replace(
+      /This matter pertains to (.+?) before the (.+?)\./g,
+      "यह मामला $1 से संबंधित है, जो $2 के समक्ष लंबित है।"
+    )
+
+    // Stage translations inside the sentence
+    .replace(/First Hearing/g, "प्रथम सुनवाई")
+    .replace(/Evidence/g, "साक्ष्य")
+    .replace(/Arguments/g, "बहस")
+    .replace(/Judgment/g, "निर्णय");
+};
+
 interface Matter {
   id: string;
   matterNumber: string;
@@ -34,6 +70,7 @@ export default function AIDrafts() {
   const [loading, setLoading] = useState(false);
   const [showClauseLibrary, setShowClauseLibrary] = useState(false);
   const [matters, setMatters] = useState<Matter[]>([]);
+  const [loadingFacts, setLoadingFacts] = useState(false);
 
   const location = useLocation();
 
@@ -77,6 +114,17 @@ export default function AIDrafts() {
               matterTitle: matter.title,
               court: matter.court,
             }));
+
+            try {
+              const { data } = await api.get(`/AI/matter-context/${matterId}`);
+
+              setForm((prev) => ({
+                ...prev,
+                facts: localizeMatterContext(data.facts || "", isHindi),
+              }));
+            } catch (err) {
+              console.error("Failed to load matter context", err);
+            }
           }
         }
       } catch (err) {
@@ -102,17 +150,54 @@ export default function AIDrafts() {
     }));
   }, [aiContent]);
 
-  const selectMatter = (id: string) => {
-    const matter = matters.find((m) => m.id === id);
+  useEffect(() => {
+    if (!form.matterId) return;
 
-    setForm((prev) => ({
-      ...prev,
-      matterId: id,
-      clientName: matter?.client?.fullName ?? "",
-      matterTitle: matter?.title ?? "",
-      court: matter?.court ?? "",
-      facts: aiContent || prev.facts,
-    }));
+    const reloadFacts = async () => {
+      try {
+        const { data } = await api.get(`/AI/matter-context/${form.matterId}`);
+
+        setForm((prev) => ({
+          ...prev,
+          facts: localizeMatterContext(data.facts || "", isHindi),
+        }));
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    reloadFacts();
+  }, [isHindi]);
+
+  const selectMatter = async (id: string) => {
+    const matter = matters.find((m) => m.id === id);
+    setLoadingFacts(true);
+
+    try {
+      setForm((prev) => ({
+        ...prev,
+        matterId: id,
+        clientName: matter?.client?.fullName ?? "",
+        matterTitle: matter?.title ?? "",
+        court: matter?.court ?? "",
+      }));
+
+      const { data } = await api.get(`/AI/matter-context/${id}`);
+
+      setForm((prev) => ({
+        ...prev,
+        facts: localizeMatterContext(data.facts || "", isHindi),
+      }));
+    } catch (err) {
+      console.error("Failed to load matter context", err);
+
+      setForm((prev) => ({
+        ...prev,
+        facts: "",
+      }));
+    } finally {
+      setLoadingFacts(false);
+    }
   };
 
   const generateDraft = async () => {
@@ -289,6 +374,9 @@ export default function AIDrafts() {
               <label className="text-sm font-medium">
                 {isHindi ? "मामले के तथ्य" : "Facts of the Case"}
               </label>
+              {loadingFacts && (
+                <span className="text-xs text-blue-600">Loading...</span>
+              )}
 
               <button
                 type="button"

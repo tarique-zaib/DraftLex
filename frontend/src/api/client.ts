@@ -20,14 +20,18 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (
+      error.response?.status === 401 &&
+      !error.config?.url?.includes("/Documents/") &&
+      !error.config?.url?.endsWith("/pdf")
+    ) {
       localStorage.removeItem("draftlex_token");
       localStorage.removeItem("draftlex_user");
       window.location.href = "/login";
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

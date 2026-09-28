@@ -117,24 +117,35 @@ public class PdfExportService
                         }
                     }
 
-                    column.Item().PaddingTop(18);
-
-                    column.Item().Text("VERIFICATION")
-                        .Bold()
-                        .FontSize(13);
-
-                    column.Item().Text(
-                        $"Verified at {document.Matter?.Court ?? "________"} on {DateTime.Now:dd MMM yyyy} that the contents of this affidavit are true and correct to the best of my knowledge and belief and nothing material has been concealed.")
-                        .FontSize(12)
-                        .LineHeight(1.5f);
-
                     column.Item().PaddingTop(24);
 
+                    // Signature block (always shown)
                     column.Item().AlignRight().Column(signature =>
                     {
+                        signature.Spacing(4);
                         signature.Item().Text("_____________________");
                         signature.Item().Text(document.Matter?.Client?.FullName ?? "Deponent").Bold();
+
+                        if (document.DocumentType.Equals("Affidavit", StringComparison.OrdinalIgnoreCase))
+                        {
+                            signature.Item().Text("Deponent").FontSize(11);
+                        }
                     });
+
+                    // VERIFICATION is only for Affidavit
+                    if (document.DocumentType.Equals("Affidavit", StringComparison.OrdinalIgnoreCase))
+                    {
+                        column.Item().PaddingTop(24);
+
+                        column.Item().Text("VERIFICATION")
+                            .Bold()
+                            .FontSize(13);
+
+                        column.Item().Text(
+                            $"Verified at {document.Matter?.Court ?? "________"} on {DateTime.Now:dd MMM yyyy} that the contents of this affidavit are true and correct to the best of my knowledge and belief and nothing material has been concealed.")
+                            .FontSize(12)
+                            .LineHeight(1.5f);
+                    }
                 });
 
                 // FOOTER

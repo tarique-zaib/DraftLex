@@ -26,7 +26,7 @@ public class MatterCopilotService : ICopilotService
         _httpClient.BaseAddress = new Uri(
             configuration["Ollama:BaseUrl"] ?? "http://localhost:11434");
 
-        _modelName = configuration["Ollama:Model"] ?? "llama3.1";
+        _modelName = configuration["Ollama:Model"] ?? "qwen2.5:14b";
     }
 
     public async Task<CopilotChatResponse> ChatAsync(
