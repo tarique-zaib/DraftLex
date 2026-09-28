@@ -167,22 +167,22 @@ Mandatory Rules:
             return $"""
 {CommonRules(true)}
 
-कार्य: भारतीय न्यायालय हेतु शपथपत्र (Affidavit) तैयार करें।
+कार्य: भारतीय न्यायालय हेतु शपथपत्र तैयार करें।
 
 महत्वपूर्ण नियम:
 - केवल नीचे दिए गए तथ्यों का उपयोग करें।
-- कोई नया तथ्य, पिता का नाम, पता, आयु, गिरफ्तारी, संपत्ति, परिवार या आरोप न जोड़ें।
-- यदि कोई जानकारी उपलब्ध नहीं है तो उसे छोड़ दें।
-- "मैं शपथकर्ता हूँ" जैसे अनावश्यक अनुच्छेद न जोड़ें।
-- प्रत्येक वास्तविक तथ्य को अलग क्रमांकित अनुच्छेद में लिखें।
-- अंत में "प्रार्थना" और "शपथकर्ता" अवश्य दें।
-- "सत्यापन / Verification" न जोड़ें।
+- कोई नया तथ्य, आरोप, पिता का नाम, पता, आयु, व्यवसाय या संपत्ति न जोड़ें।
+- यदि जानकारी उपलब्ध नहीं है तो उसे छोड़ दें।
+- अनावश्यक वाक्य जैसे "मैं शपथकर्ता हूँ" न लिखें।
+- केवल वास्तविक तथ्यों को क्रमांकित अनुच्छेदों में प्रस्तुत करें।
+- न्यायालय, वाद संख्या और दिनांक दोबारा न लिखें; DraftLex उन्हें पहले से प्रदर्शित करता है।
+- "सत्यापन (Verification)" न जोड़ें।
 
-शपथकर्ता: {client}
+मुवक्किल: {client}
 वाद: {matter}
 न्यायालय: {court}
 
-दिए गए तथ्य:
+उपलब्ध तथ्य:
 {facts}
 
 आउटपुट प्रारूप:
@@ -191,9 +191,9 @@ Mandatory Rules:
 
 मैं, {client}, एतद्द्वारा शपथपूर्वक निम्नलिखित कथन करता/करती हूँ—
 
-1. (पहला वास्तविक तथ्य)
-2. (दूसरा वास्तविक तथ्य)
-3. (आगे केवल उपलब्ध तथ्य)
+1. उपलब्ध तथ्यों के आधार पर पहला वास्तविक तथ्य।
+2. प्रत्येक अलग तथ्य को अलग क्रमांकित अनुच्छेद में लिखें।
+3. कोई नया तथ्य न जोड़ें।
 
 प्रार्थना
 
@@ -202,25 +202,24 @@ Mandatory Rules:
 शपथकर्ता
 
 {client}
-
-यदि केवल एक तथ्य दिया गया है, तो केवल एक क्रमांकित अनुच्छेद लिखें।
 """;
         }
 
         return $"""
 {CommonRules(false)}
 
-Task: Draft an Indian Court Affidavit.
+Task: Draft an Affidavit for an Indian Court.
 
 CRITICAL RULES:
 - Use ONLY the supplied facts.
-- Never invent names, addresses, age, occupation, custody status or allegations.
-- Do not add generic paragraphs like "I am the deponent."
-- Convert every supplied fact into a numbered affidavit paragraph.
-- Do not add Verification.
-- End with Prayer and Deponent.
+- Never invent citizenship, address, age, occupation, family details, custody status, property or allegations.
+- Omit missing information.
+- Do not write generic boilerplate such as "I am the deponent."
+- Convert only the supplied facts into numbered affidavit paragraphs.
+- Do not repeat Court, Matter Number or Date because DraftLex already prints them.
+- Do not include Verification.
 
-Deponent: {client}
+Client: {client}
 Matter: {matter}
 Court: {court}
 
@@ -233,9 +232,10 @@ AFFIDAVIT
 
 I, {client}, do hereby solemnly affirm and state as under:
 
-1. (First supplied fact)
-2. (Second supplied fact)
-3. (Continue only with supplied facts.)
+1. Write the first actual fact from the supplied facts.
+2. Convert each remaining supplied fact into a separate numbered paragraph.
+3. Preserve the order of the supplied facts.
+4. Do not create any new factual paragraph.
 
 PRAYER
 
@@ -244,8 +244,6 @@ It is respectfully prayed that this affidavit be taken on record by this Hon'ble
 DEPONENT
 
 {client}
-
-If only one factual point exists, produce only one numbered paragraph.
 """;
     }
 
