@@ -15,49 +15,92 @@ public class CreateHearingCommandHandler
         _db = db;
     }
 
-    public async Task<Guid> Handle(CreateHearingCommand request, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(
+        CreateHearingCommand request,
+        CancellationToken cancellationToken)
     {
         var matterExists = await _db.Matters
-            .AnyAsync(m => m.Id == request.MatterId, cancellationToken);
+            .AnyAsync(
+                m => m.Id == request.MatterId,
+                cancellationToken);
 
         if (!matterExists)
             throw new ArgumentException("Matter not found.");
+
+        // DraftLex uses India Standard Time for court hearing schedules.
+        var indiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById(
+            OperatingSystem.IsWindows()
+                ? "India Standard Time"
+                : "Asia/Kolkata");
+
+        // The value coming from the hearing form represents
+        // an India-local date/time.
+        var hearingLocal = DateTime.SpecifyKind(
+            request.HearingDate,
+            DateTimeKind.Unspecified);
+
+        // Convert India local time to UTC for PostgreSQL timestamptz.
+        var hearingUtc = TimeZoneInfo.ConvertTimeToUtc(
+            hearingLocal,
+            indiaTimeZone);
+
+        DateTime? nextHearingUtc = null;
+
+        if (request.NextHearingDate.HasValue)
+        {
+            var nextHearingLocal = DateTime.SpecifyKind(
+                request.NextHearingDate.Value,
+                DateTimeKind.Unspecified);
+
+            nextHearingUtc = TimeZoneInfo.ConvertTimeToUtc(
+                nextHearingLocal,
+                indiaTimeZone);
+        }
 
         var hearing = new Hearing
         {
             Id = Guid.NewGuid(),
             MatterId = request.MatterId,
 
-            // PostgreSQL timestamptz -> UTC
-            HearingDate = DateTime.SpecifyKind(request.HearingDate, DateTimeKind.Utc),
+            HearingDate = hearingUtc,
 
             CourtRoom = request.CourtRoom,
             JudgeName = request.JudgeName,
             Stage = request.Stage,
             Remarks = request.Remarks,
 
-            NextHearingDate = request.NextHearingDate.HasValue
-        ? DateTime.SpecifyKind(request.NextHearingDate.Value, DateTimeKind.Utc)
-        : null,
+            NextHearingDate = nextHearingUtc,
 
             CreatedAt = DateTime.UtcNow
         };
 
         _db.Hearings.Add(hearing);
 
-        // Automatically create timeline event
+        // Timeline description should display the
+        // hearing in India local time.
+        var hearingLocalForDisplay =
+            TimeZoneInfo.ConvertTimeFromUtc(
+                hearing.HearingDate,
+                indiaTimeZone);
+
         _db.TimelineEvents.Add(new TimelineEvent
         {
             Id = Guid.NewGuid(),
             MatterId = hearing.MatterId,
             EventType = "HearingCreated",
             Title = "Hearing Scheduled",
-            Description = $"A hearing has been scheduled for {hearing.HearingDate:dd MMM yyyy hh:mm tt}. Stage: {hearing.Stage}.",
 
-            // Court event time
-            EventDate = DateTime.SpecifyKind(hearing.HearingDate, DateTimeKind.Unspecified),
+            Description =
+                $"A hearing has been scheduled for " +
+                $"{hearingLocalForDisplay:dd MMM yyyy hh:mm tt}. " +
+                $"Stage: {hearing.Stage}.",
 
-            // Audit timestamp
+            // TimelineEvents currently use an unspecified
+            // court-event date.
+            EventDate = DateTime.SpecifyKind(
+                hearingLocalForDisplay,
+                DateTimeKind.Unspecified),
+
             CreatedAt = DateTime.UtcNow
         });
 

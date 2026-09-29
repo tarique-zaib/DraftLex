@@ -835,7 +835,7 @@ export default function Dashboard() {
                             </p>
 
                             <p className="mt-1 text-xs text-slate-400">
-                              {new Date(h.hearingDate).toLocaleDateString(
+                              {new Intl.DateTimeFormat(
                                 i18n.language.startsWith("hi")
                                   ? "hi-IN"
                                   : "en-IN",
@@ -843,8 +843,9 @@ export default function Dashboard() {
                                   day: "2-digit",
                                   month: "long",
                                   year: "numeric",
+                                  timeZone: "Asia/Kolkata",
                                 },
-                              )}
+                              ).format(new Date(h.hearingDate))}
                             </p>
                           </div>
 
