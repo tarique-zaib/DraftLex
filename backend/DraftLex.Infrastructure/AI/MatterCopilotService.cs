@@ -27,11 +27,15 @@ public class MatterCopilotService : ICopilotService
             configuration["Ollama:BaseUrl"]
             ?? "http://localhost:11434");
 
-        _httpClient.Timeout = TimeSpan.FromMinutes(5);
+        _httpClient.Timeout = TimeSpan.FromMinutes(10);
 
         _modelName = configuration["Ollama:Model"]
             ?? "qwen2.5:7b";
     }
+
+    // ============================================================
+    // CHAT
+    // ============================================================
 
     public async Task<CopilotChatResponse> ChatAsync(
         Guid matterId,
@@ -58,9 +62,7 @@ public class MatterCopilotService : ICopilotService
             .OrderByDescending(x => x.Version)
             .ToListAsync(cancellationToken);
 
-        /*
-         * Only use documents explicitly selected by the user.
-         */
+        // Only use documents explicitly selected by the user.
         var selectedDocuments = allDocuments
             .Where(x => documentIds.Contains(x.Id))
             .ToList();
@@ -70,12 +72,11 @@ public class MatterCopilotService : ICopilotService
             .OrderBy(x => x.EventDate)
             .ToListAsync(cancellationToken);
 
-        /*
-         * ----------------------------------------------------------
-         * STAGE 1
-         * Extract ONLY explicit facts from the selected documents.
-         * ----------------------------------------------------------
-         */
+        // ========================================================
+        // STAGE 1
+        // Extract ONLY explicit facts.
+        // ========================================================
+
         var factsPrompt = BuildFactsPrompt(
             selectedDocuments,
             message);
@@ -84,13 +85,17 @@ public class MatterCopilotService : ICopilotService
             factsPrompt,
             cancellationToken);
 
-        /*
-         * ----------------------------------------------------------
-         * STAGE 2
-         * Generate the actual answer using ONLY the extracted facts
-         * plus the matter information.
-         * ----------------------------------------------------------
-         */
+        if (string.IsNullOrWhiteSpace(extractedFacts))
+        {
+            extractedFacts =
+                "No explicit facts could be extracted from the selected documents.";
+        }
+
+        // ========================================================
+        // STAGE 2
+        // Generate initial response.
+        // ========================================================
+
         var finalPrompt = BuildFinalPrompt(
             matter,
             hearings,
@@ -99,12 +104,38 @@ public class MatterCopilotService : ICopilotService
             extractedFacts,
             message);
 
-        var reply = await GenerateAsync(
+        var draftReply = await GenerateAsync(
             finalPrompt,
             cancellationToken);
 
+        if (string.IsNullOrWhiteSpace(draftReply))
+            draftReply = "No response received.";
+
+        // ========================================================
+        // STAGE 3
+        // FAST GROUNDING VALIDATOR
+        //
+        // IMPORTANT:
+        // The original selected document is the source of truth.
+        // We deliberately keep this prompt small to reduce Ollama
+        // processing time.
+        // ========================================================
+
+        var validatorPrompt = BuildValidatorPrompt(
+            selectedDocuments,
+            draftReply,
+            message);
+
+        var reply = await GenerateAsync(
+            validatorPrompt,
+            cancellationToken);
+
         if (string.IsNullOrWhiteSpace(reply))
-            reply = "No response received.";
+            reply = draftReply;
+
+        // ========================================================
+        // SAVE CHAT HISTORY
+        // ========================================================
 
         _db.CopilotMessages.Add(new CopilotMessage
         {
@@ -124,13 +155,17 @@ public class MatterCopilotService : ICopilotService
             CreatedAt = DateTime.UtcNow
         });
 
-        await _db.SaveChangesAsync(cancellationToken);
+        await _db.SaveChangesAsync();
 
         return new CopilotChatResponse
         {
             Reply = reply
         };
     }
+
+    // ============================================================
+    // CHAT HISTORY
+    // ============================================================
 
     public async Task<List<CopilotMessageDto>> GetHistoryAsync(
         Guid matterId,
@@ -149,7 +184,8 @@ public class MatterCopilotService : ICopilotService
     }
 
     // ============================================================
-    // STAGE 1: EXTRACT EXPLICIT FACTS
+    // STAGE 1
+    // EXTRACT EXPLICIT FACTS
     // ============================================================
 
     private static string BuildFactsPrompt(
@@ -163,7 +199,7 @@ public class MatterCopilotService : ICopilotService
 
         sb.AppendLine();
 
-        sb.AppendLine("IMPORTANT RULES:");
+        sb.AppendLine("===== ABSOLUTE RULES =====");
 
         sb.AppendLine(
             "1. Extract ONLY facts explicitly stated in the supplied documents.");
@@ -190,7 +226,7 @@ public class MatterCopilotService : ICopilotService
             "8. Preserve dates, times, locations, people, actions and descriptions exactly as stated.");
 
         sb.AppendLine(
-            "9. If something is not stated, it must NOT appear in the extracted facts.");
+            "9. If something is not explicitly stated, it must NOT appear in the extracted facts.");
 
         sb.AppendLine(
             "10. Return only a numbered list of explicit factual statements.");
@@ -201,8 +237,7 @@ public class MatterCopilotService : ICopilotService
 
         if (!documents.Any())
         {
-            sb.AppendLine(
-                "No documents were selected.");
+            sb.AppendLine("No documents were selected.");
         }
         else
         {
@@ -212,8 +247,17 @@ public class MatterCopilotService : ICopilotService
                     g.OrderByDescending(x => x.Version).First()))
             {
                 sb.AppendLine();
+
                 sb.AppendLine(
                     $"--- DOCUMENT: {document.Title} ---");
+
+                sb.AppendLine(
+                    $"Document Type: {document.DocumentType}");
+
+                sb.AppendLine(
+                    $"Version: {document.Version}");
+
+                sb.AppendLine();
 
                 if (string.IsNullOrWhiteSpace(document.Content))
                 {
@@ -225,6 +269,8 @@ public class MatterCopilotService : ICopilotService
                     sb.AppendLine(document.Content);
                 }
 
+                sb.AppendLine();
+
                 sb.AppendLine(
                     $"--- END DOCUMENT: {document.Title} ---");
             }
@@ -233,11 +279,13 @@ public class MatterCopilotService : ICopilotService
         sb.AppendLine();
 
         sb.AppendLine("===== LAWYER REQUEST =====");
+
         sb.AppendLine(question);
 
         sb.AppendLine();
 
         sb.AppendLine("===== OUTPUT =====");
+
         sb.AppendLine(
             "Extract only explicit factual statements from the selected documents.");
 
@@ -245,7 +293,8 @@ public class MatterCopilotService : ICopilotService
     }
 
     // ============================================================
-    // STAGE 2: FINAL COPILOT RESPONSE
+    // STAGE 2
+    // GENERATE INITIAL COPILOT RESPONSE
     // ============================================================
 
     private static string BuildFinalPrompt(
@@ -437,7 +486,8 @@ public class MatterCopilotService : ICopilotService
 
         sb.AppendLine();
 
-        sb.AppendLine("===== CROSS-EXAMINATION INSTRUCTIONS =====");
+        sb.AppendLine(
+            "===== CROSS-EXAMINATION INSTRUCTIONS =====");
 
         sb.AppendLine(
             "If the lawyer requests cross-examination questions:");
@@ -492,12 +542,116 @@ public class MatterCopilotService : ICopilotService
     }
 
     // ============================================================
-    // OLLAMA
+    // STAGE 3
+    // FAST GROUNDING VALIDATOR
+    // ============================================================
+
+    private static string BuildValidatorPrompt(
+        List<LegalDocument> documents,
+        string draftReply,
+        string lawyerQuestion)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine(
+            "You are a strict factual validator for DraftLex.");
+
+        sb.AppendLine(
+            "Correct the generated draft using ONLY the original source document.");
+
+        sb.AppendLine(
+            "Do not create facts.");
+
+        sb.AppendLine(
+            "Do not add legal advice.");
+
+        sb.AppendLine(
+            "Return ONLY the corrected questions.");
+
+        sb.AppendLine();
+
+        // ========================================================
+        // SOURCE
+        // ========================================================
+
+        sb.AppendLine("===== SOURCE =====");
+
+        foreach (var document in documents
+            .GroupBy(x => x.Title)
+            .Select(g =>
+                g.OrderByDescending(x => x.Version).First()))
+        {
+            sb.AppendLine(document.Content);
+        }
+
+        sb.AppendLine();
+
+        // ========================================================
+        // REQUEST
+        // ========================================================
+
+        sb.AppendLine("===== REQUEST =====");
+
+        sb.AppendLine(lawyerQuestion);
+
+        sb.AppendLine();
+
+        // ========================================================
+        // DRAFT
+        // ========================================================
+
+        sb.AppendLine("===== DRAFT =====");
+
+        sb.AppendLine(draftReply);
+
+        sb.AppendLine();
+
+        // ========================================================
+        // STRICT RULES
+        // ========================================================
+
+        sb.AppendLine("===== RULES =====");
+
+        sb.AppendLine(
+            "1. Every factual premise must be supported by the source.");
+
+        sb.AppendLine(
+            "2. Remove invented people, witnesses, events, distances, addresses, conversations, delays, objects, motives or circumstances.");
+
+        sb.AppendLine(
+            "3. Do not assume other people were present unless the source says so.");
+
+        sb.AppendLine(
+            "4. Do not ask why the witness informed police unless the source states why.");
+
+        sb.AppendLine(
+            "5. Do not invent details about the black bag.");
+
+        sb.AppendLine(
+            "6. Do not infer facts from common knowledge.");
+
+        sb.AppendLine(
+            "7. A causal relationship may be used when it is explicitly stated in the source.");
+
+        sb.AppendLine(
+            "8. If a question contains an unsupported premise, rewrite or remove it.");
+
+        sb.AppendLine(
+            "9. Preserve supported questions.");
+
+        sb.AppendLine(
+            "10. Return ONLY the final numbered questions.");
+
+        return sb.ToString();
+    }
+
+    // ============================================================
+    // OLLAMA GENERATION
     // ============================================================
 
     private async Task<string> GenerateAsync(
-     string prompt,
-     CancellationToken cancellationToken)
+        string prompt,
+        CancellationToken cancellationToken)
     {
         var request = new OllamaGenerateRequest
         {
@@ -510,8 +664,13 @@ public class MatterCopilotService : ICopilotService
             }
         };
 
-        using var ollamaCts = new CancellationTokenSource(
-            TimeSpan.FromMinutes(10));
+        /*
+         * Do not tie Ollama generation directly to the browser/API
+         * request cancellation token.
+         */
+        using var ollamaCts =
+            new CancellationTokenSource(
+                TimeSpan.FromMinutes(10));
 
         var response = await _httpClient.PostAsJsonAsync(
             "/api/generate",
@@ -528,6 +687,10 @@ public class MatterCopilotService : ICopilotService
             ?? string.Empty;
     }
 
+    // ============================================================
+    // OLLAMA REQUEST
+    // ============================================================
+
     private class OllamaGenerateRequest
     {
         [JsonPropertyName("model")]
@@ -543,11 +706,19 @@ public class MatterCopilotService : ICopilotService
         public OllamaOptions Options { get; set; } = new();
     }
 
+    // ============================================================
+    // OLLAMA OPTIONS
+    // ============================================================
+
     private class OllamaOptions
     {
         [JsonPropertyName("temperature")]
         public double Temperature { get; set; }
     }
+
+    // ============================================================
+    // OLLAMA RESPONSE
+    // ============================================================
 
     private class OllamaGenerateResponse
     {

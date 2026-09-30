@@ -33,6 +33,7 @@ const suggestions = [
   "Prepare arguments for the next hearing.",
   "Draft an affidavit.",
   "Draft a written statement.",
+  "Prepare cross-examination questions for PW1.",
   "List pending tasks.",
   "Find missing documents.",
 ];
@@ -418,27 +419,46 @@ export default function CopilotPanel({ matterId }: Props) {
         {
           matterId,
           message,
+          // Preserve the user's selected document context.
           documentIds: selectedDocumentIds,
         },
       );
+
+      const reply =
+        typeof data?.reply === "string" && data.reply.trim()
+          ? data.reply
+          : "The Copilot returned an empty response.";
 
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: data.reply,
+          content: reply,
         },
       ]);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("Copilot chat error:", err);
+      console.error("Copilot status:", err?.response?.status);
+      console.error("Copilot response:", err?.response?.data);
+
+      const status = err?.response?.status;
+      const backendMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.response?.data?.title ||
+        (typeof err?.response?.data === "string"
+          ? err.response.data
+          : null) ||
+        err?.message ||
+        "Unknown error";
 
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
           content: i18n.language.startsWith("hi")
-            ? "क्षमा करें, मैं आपका अनुरोध पूरा नहीं कर सका।"
-            : "Sorry, I couldn't process your request.",
+            ? `Copilot त्रुटि${status ? ` (${status})` : ""}: ${backendMessage}`
+            : `Copilot error${status ? ` (${status})` : ""}: ${backendMessage}`,
         },
       ]);
     } finally {

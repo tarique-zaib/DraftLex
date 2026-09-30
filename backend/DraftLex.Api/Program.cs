@@ -69,6 +69,21 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("DraftLexFrontend", policy =>
+    {
+        policy
+            .WithOrigins(
+                "https://4mf00dhb-5173.inc1.devtunnels.ms",
+                "http://localhost:5173"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 // Database
 builder.Services.AddDbContext<DraftLexDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DraftLexDb")));
@@ -132,6 +147,7 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 var app = builder.Build();
 
 app.UseCors("Frontend");
+app.UseCors("DraftLexFrontend");
 
 // -------------------------
 // Middleware
