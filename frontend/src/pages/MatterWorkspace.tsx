@@ -20,6 +20,9 @@ import {
   Download,
   Trash2,
   Eye,
+  IndianRupee,
+  CreditCard,
+  PlusCircle,
 } from "lucide-react";
 
 import { getMatter } from "../api/matters";
@@ -57,6 +60,63 @@ function formatTimelineDate(date: string) {
   );
 }
 
+function formatFinancialDate(date: string) {
+  return new Date(date).toLocaleDateString(
+    i18n.language.startsWith("hi") ? "hi-IN" : "en-IN",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    },
+  );
+}
+
+interface FinancialSummary {
+  matterId: string;
+  totalCharges: number;
+  amountReceived: number;
+  outstanding: number;
+  overpaidAmount: number;
+  status: string;
+}
+
+interface MatterFee {
+  id: string;
+  matterId: string;
+  feeType: string;
+  fixedFee: number;
+  dailyRate: number;
+  hourlyRate: number;
+  appearanceRate: number;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+interface MatterFeeEntry {
+  id: string;
+  matterId: string;
+  matterFeeId?: string | null;
+  hearingId?: string | null;
+  chargeDate: string;
+  chargeType: string;
+  description: string;
+  amount: number;
+  hours?: number | null;
+  remarks?: string | null;
+  createdAt: string;
+}
+
+interface Payment {
+  id: string;
+  paymentDate: string;
+  amount: number;
+  paymentMode: string;
+  referenceNumber?: string | null;
+  remarks?: string | null;
+  createdAt: string;
+}
+
 export default function MatterWorkspace() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -80,6 +140,262 @@ export default function MatterWorkspace() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Financials
+  const [financialSummary, setFinancialSummary] =
+    useState<FinancialSummary | null>(null);
+
+  const [matterFee, setMatterFee] = useState<MatterFee | null>(null);
+  const [charges, setCharges] = useState<MatterFeeEntry[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+
+  const [financialLoading, setFinancialLoading] = useState(false);
+
+  const [showChargeModal, setShowChargeModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showFeeModal, setShowFeeModal] = useState(false);
+
+  const [savingCharge, setSavingCharge] = useState(false);
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [savingFee, setSavingFee] = useState(false);
+
+  // Charge form
+  const [chargeDate, setChargeDate] = useState("");
+  const [chargeType, setChargeType] = useState("Daily");
+  const [chargeDescription, setChargeDescription] = useState("");
+  const [chargeAmount, setChargeAmount] = useState("");
+  const [chargeHours, setChargeHours] = useState("");
+  const [chargeRemarks, setChargeRemarks] = useState("");
+
+  // Payment form
+  const [paymentDate, setPaymentDate] = useState("");
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMode, setPaymentMode] = useState("UPI");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [paymentRemarks, setPaymentRemarks] = useState("");
+
+  // Fee configuration form
+  const [feeType, setFeeType] = useState("Daily");
+  const [fixedFee, setFixedFee] = useState("");
+  const [dailyRate, setDailyRate] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
+  const [appearanceRate, setAppearanceRate] = useState("");
+  const [feeNotes, setFeeNotes] = useState("");
+
+  const loadFinancials = async () => {
+    if (!id) return;
+
+    try {
+      setFinancialLoading(true);
+
+      const [summaryResult, feeResult, chargesResult, paymentsResult] =
+        await Promise.allSettled([
+          api.get<FinancialSummary>(`/matters/${id}/financial-summary`),
+          api.get<MatterFee>(`/matters/${id}/fee`),
+          api.get<MatterFeeEntry[]>(`/matters/${id}/charges`),
+          api.get<Payment[]>(`/matters/${id}/payments`),
+        ]);
+
+      if (summaryResult.status === "fulfilled") {
+        setFinancialSummary(summaryResult.value.data);
+      }
+
+      if (feeResult.status === "fulfilled") {
+        setMatterFee(feeResult.value.data);
+
+        setFeeType(feeResult.value.data.feeType);
+        setFixedFee(String(feeResult.value.data.fixedFee ?? 0));
+        setDailyRate(String(feeResult.value.data.dailyRate ?? 0));
+        setHourlyRate(String(feeResult.value.data.hourlyRate ?? 0));
+        setAppearanceRate(String(feeResult.value.data.appearanceRate ?? 0));
+        setFeeNotes(feeResult.value.data.notes ?? "");
+      }
+
+      if (chargesResult.status === "fulfilled") {
+        setCharges(chargesResult.value.data);
+      }
+
+      if (paymentsResult.status === "fulfilled") {
+        setPayments(paymentsResult.value.data);
+      }
+    } catch (err) {
+      console.error("Failed to load financials", err);
+    } finally {
+      setFinancialLoading(false);
+    }
+  };
+
+  const addCharge = async () => {
+    if (!id) return;
+
+    if (!chargeDescription.trim()) {
+      alert("Please enter charge description.");
+      return;
+    }
+
+    const amount = Number(chargeAmount);
+
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid charge amount.");
+      return;
+    }
+
+    if (chargeType === "Hourly") {
+      const hours = Number(chargeHours);
+
+      if (!hours || hours <= 0) {
+        alert("Please enter valid hours.");
+        return;
+      }
+    }
+
+    try {
+      setSavingCharge(true);
+
+      await api.post(`/matters/${id}/charges`, {
+        chargeDate: chargeDate || new Date().toISOString().split("T")[0],
+
+        chargeType,
+
+        description: chargeDescription,
+
+        amount,
+
+        hours: chargeType === "Hourly" ? Number(chargeHours) : null,
+
+        remarks: chargeRemarks || null,
+      });
+
+      setShowChargeModal(false);
+
+      resetChargeForm();
+
+      await loadFinancials();
+    } catch (err) {
+      console.error(err);
+
+      alert("Failed to add charge.");
+    } finally {
+      setSavingCharge(false);
+    }
+  };
+
+  const resetChargeForm = () => {
+    setChargeDate(new Date().toISOString().split("T")[0]);
+    setChargeType("Daily");
+    setChargeDescription("");
+    setChargeAmount("");
+    setChargeHours("");
+    setChargeRemarks("");
+  };
+
+  const addPayment = async () => {
+    if (!id) return;
+
+    const amount = Number(paymentAmount);
+
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid payment amount.");
+      return;
+    }
+
+    try {
+      setSavingPayment(true);
+
+      await api.post(`/matters/${id}/payments`, {
+        paymentDate: paymentDate || new Date().toISOString().split("T")[0],
+
+        amount,
+
+        paymentMode,
+
+        referenceNumber: paymentReference || null,
+
+        remarks: paymentRemarks || null,
+      });
+
+      setShowPaymentModal(false);
+
+      resetPaymentForm();
+
+      await loadFinancials();
+    } catch (err) {
+      console.error(err);
+
+      alert("Failed to record payment.");
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
+  const resetPaymentForm = () => {
+    setPaymentDate(new Date().toISOString().split("T")[0]);
+    setPaymentAmount("");
+    setPaymentMode("UPI");
+    setPaymentReference("");
+    setPaymentRemarks("");
+  };
+
+  const saveFeeConfiguration = async () => {
+    if (!id) return;
+
+    try {
+      setSavingFee(true);
+
+      const payload = {
+        feeType,
+        fixedFee: Number(fixedFee || 0),
+        dailyRate: Number(dailyRate || 0),
+        hourlyRate: Number(hourlyRate || 0),
+        appearanceRate: Number(appearanceRate || 0),
+        notes: feeNotes || null,
+      };
+
+      if (matterFee) {
+        await api.put(`/matters/${id}/fee`, payload);
+      } else {
+        await api.post(`/matters/${id}/fee`, payload);
+      }
+
+      setShowFeeModal(false);
+
+      await loadFinancials();
+    } catch (err) {
+      console.error(err);
+
+      alert("Failed to save fee configuration.");
+    } finally {
+      setSavingFee(false);
+    }
+  };
+
+  const deleteCharge = async (chargeId: string) => {
+    if (!id) return;
+
+    if (!confirm("Delete this charge?")) return;
+
+    try {
+      await api.delete(`/matters/${id}/charges/${chargeId}`);
+      await loadFinancials();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete charge.");
+    }
+  };
+
+  const deletePayment = async (paymentId: string) => {
+    if (!id) return;
+
+    if (!confirm("Delete this payment?")) return;
+
+    try {
+      await api.delete(`/matters/${id}/payments/${paymentId}`);
+      await loadFinancials();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete payment.");
+    }
+  };
 
   const [caseSummary, setCaseSummary] = useState<{
     summary: string;
@@ -285,6 +601,7 @@ export default function MatterWorkspace() {
           setTimeline(timelineResult.value.data);
 
         await loadCaseSummary();
+        await loadFinancials();
 
         if (matterResult.status === "rejected")
           console.error(matterResult.reason);
@@ -342,6 +659,23 @@ export default function MatterWorkspace() {
   };
 
   const progress = progressMap[currentStage] ?? 15;
+
+  const getFinancialStatusClass = (status?: string) => {
+    switch (status) {
+      case "Paid":
+        return "bg-green-100 text-green-700 border-green-200";
+
+      case "Partially Paid":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+
+      case "Overpaid":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+
+      case "Unpaid":
+      default:
+        return "bg-red-100 text-red-700 border-red-200";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-100 p-8">
@@ -619,6 +953,289 @@ export default function MatterWorkspace() {
                 : "Estimated progress based on the current case status."}
             </p>
           </div>
+
+          {/* FINANCIALS */}
+          <Section
+            title={
+              i18n.language.startsWith("hi") ? "वित्तीय विवरण" : "Financials"
+            }
+            icon={<IndianRupee size={20} />}
+          >
+            {financialLoading ? (
+              <div className="rounded-lg bg-slate-50 p-6 text-center text-slate-500">
+                Loading financial information...
+              </div>
+            ) : (
+              <>
+                {/* Summary */}
+                <div className="grid gap-4 md:grid-cols-3">
+                  <FinancialCard
+                    label="Total Charges"
+                    value={financialSummary?.totalCharges ?? 0}
+                  />
+
+                  <FinancialCard
+                    label="Amount Received"
+                    value={financialSummary?.amountReceived ?? 0}
+                  />
+
+                  <FinancialCard
+                    label="Outstanding"
+                    value={financialSummary?.outstanding ?? 0}
+                  />
+                </div>
+
+                {/* Status */}
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Payment Status
+                    </p>
+
+                    <div
+                      className={`mt-2 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-bold ${getFinancialStatusClass(
+                        financialSummary?.status,
+                      )}`}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-current" />
+
+                      {financialSummary?.status ?? "Unpaid"}
+                    </div>
+                  </div>
+
+                  {(financialSummary?.overpaidAmount ?? 0) > 0 && (
+                    <div className="rounded-lg bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
+                      Overpaid: ₹
+                      {(financialSummary?.overpaidAmount ?? 0).toLocaleString(
+                        "en-IN",
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Fee Configuration */}
+                <div className="mt-4 rounded-xl border border-slate-200 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-slate-900">
+                        Fee Configuration
+                      </h3>
+
+                      {matterFee ? (
+                        <div className="mt-2 flex flex-wrap gap-2 text-sm">
+                          <span className="rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">
+                            {matterFee.feeType}
+                          </span>
+
+                          {matterFee.feeType === "Daily" && (
+                            <span className="rounded-full bg-slate-100 px-3 py-1">
+                              ₹{matterFee.dailyRate.toLocaleString("en-IN")} /
+                              day
+                            </span>
+                          )}
+
+                          {matterFee.feeType === "Hourly" && (
+                            <span className="rounded-full bg-slate-100 px-3 py-1">
+                              ₹{matterFee.hourlyRate.toLocaleString("en-IN")} /
+                              hour
+                            </span>
+                          )}
+
+                          {matterFee.feeType === "PerAppearance" && (
+                            <span className="rounded-full bg-slate-100 px-3 py-1">
+                              ₹
+                              {matterFee.appearanceRate.toLocaleString("en-IN")}{" "}
+                              / appearance
+                            </span>
+                          )}
+
+                          {matterFee.feeType === "Fixed" && (
+                            <span className="rounded-full bg-slate-100 px-3 py-1">
+                              ₹{matterFee.fixedFee.toLocaleString("en-IN")}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-sm text-slate-500">
+                          No fee configuration added.
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => setShowFeeModal(true)}
+                      className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
+                    >
+                      <Pencil size={16} />
+                      {matterFee ? "Edit Fee" : "Set Fee"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Charges */}
+                <div className="mt-4 rounded-xl border border-slate-200 p-4">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="font-semibold text-slate-900">Charges</h3>
+
+                    <div className="flex flex-wrap gap-2">
+                      {matterFee?.feeType === "Daily" && (
+                        <button
+                          onClick={() => {
+                            setChargeDate(
+                              new Date().toISOString().split("T")[0],
+                            );
+
+                            setChargeType("Daily");
+
+                            setChargeDescription(
+                              "Daily advocate professional fee",
+                            );
+
+                            setChargeAmount(String(matterFee.dailyRate));
+
+                            setChargeHours("");
+
+                            setChargeRemarks("");
+
+                            setShowChargeModal(true);
+                          }}
+                          className="flex items-center gap-2 rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+                        >
+                          <PlusCircle size={16} />
+                          Daily Charge ₹
+                          {matterFee.dailyRate.toLocaleString("en-IN")}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          resetChargeForm();
+                          setShowChargeModal(true);
+                        }}
+                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                      >
+                        <PlusCircle size={16} />
+                        Add Charge
+                      </button>
+                    </div>
+                  </div>
+
+                  {charges.length === 0 ? (
+                    <EmptyCard text="No charges recorded." />
+                  ) : (
+                    <div className="space-y-2">
+                      {charges.map((charge) => (
+                        <div
+                          key={charge.id}
+                          className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 p-3"
+                        >
+                          <div>
+                            <p className="font-medium text-slate-900">
+                              {charge.description}
+                            </p>
+
+                            <p className="text-xs text-slate-500">
+                              {formatFinancialDate(charge.chargeDate)} •{" "}
+                              {charge.chargeType}
+                              {charge.hours
+                                ? ` • ${charge.hours} hour${
+                                    charge.hours === 1 ? "" : "s"
+                                  }`
+                                : ""}
+                            </p>
+
+                            {charge.remarks && (
+                              <p className="mt-1 text-xs text-slate-400">
+                                {charge.remarks}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold">
+                              ₹{charge.amount.toLocaleString("en-IN")}
+                            </span>
+
+                            <button
+                              onClick={() => deleteCharge(charge.id)}
+                              className="rounded-lg p-2 text-red-600 hover:bg-red-100"
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Payments */}
+                <div className="mt-4 rounded-xl border border-slate-200 p-4">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="font-semibold text-slate-900">Payments</h3>
+
+                    <button
+                      onClick={() => {
+                        resetPaymentForm();
+                        setShowPaymentModal(true);
+                      }}
+                      className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                    >
+                      <CreditCard size={16} />
+                      Record Payment
+                    </button>
+                  </div>
+
+                  {payments.length === 0 ? (
+                    <EmptyCard text="No payments recorded." />
+                  ) : (
+                    <div className="space-y-2">
+                      {payments.map((payment) => (
+                        <div
+                          key={payment.id}
+                          className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 p-3"
+                        >
+                          <div>
+                            <p className="font-medium text-slate-900">
+                              {payment.paymentMode}
+                            </p>
+
+                            <p className="text-xs text-slate-500">
+                              {formatFinancialDate(payment.paymentDate)}
+                              {payment.referenceNumber
+                                ? ` • Ref: ${payment.referenceNumber}`
+                                : ""}
+                            </p>
+
+                            {payment.remarks && (
+                              <p className="mt-1 text-xs text-slate-400">
+                                {payment.remarks}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold text-green-700">
+                              ₹{payment.amount.toLocaleString("en-IN")}
+                            </span>
+
+                            <button
+                              onClick={() => deletePayment(payment.id)}
+                              className="rounded-lg p-2 text-red-600 hover:bg-red-100"
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </Section>
 
           {/* DETAILS */}
           <div className="grid gap-6 lg:grid-cols-2">
@@ -1081,6 +1698,383 @@ export default function MatterWorkspace() {
         </div>
       )}
 
+      {/* Add Charge Modal */}
+      {showChargeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-bold">Add Charge</h2>
+
+              <button
+                onClick={() => setShowChargeModal(false)}
+                className="text-slate-500 hover:text-slate-900"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Charge Date
+                </label>
+
+                <input
+                  type="date"
+                  value={chargeDate}
+                  onChange={(e) => setChargeDate(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Charge Type
+                </label>
+
+                <select
+                  value={chargeType}
+                  onChange={(e) => setChargeType(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                >
+                  <option value="Daily">Daily</option>
+                  <option value="Appearance">Appearance</option>
+                  <option value="Fixed">Fixed</option>
+                  <option value="Hourly">Hourly</option>
+                  <option value="Miscellaneous">Miscellaneous</option>
+                  <option value="Custom">Custom</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Description
+                </label>
+
+                <input
+                  value={chargeDescription}
+                  onChange={(e) => setChargeDescription(e.target.value)}
+                  placeholder="e.g. Daily advocate professional fee"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Amount (₹)
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={chargeAmount}
+                    onChange={(e) => setChargeAmount(e.target.value)}
+                    placeholder="5000"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+
+                {chargeType === "Hourly" && (
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">
+                      Hours
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={chargeHours}
+                      onChange={(e) => setChargeHours(e.target.value)}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Remarks
+                </label>
+
+                <textarea
+                  value={chargeRemarks}
+                  onChange={(e) => setChargeRemarks(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setShowChargeModal(false)}
+                  className="rounded-lg border border-slate-300 px-4 py-2"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={addCharge}
+                  disabled={savingCharge}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-slate-400"
+                >
+                  {savingCharge ? "Saving..." : "Add Charge"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Record Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-bold">Record Payment</h2>
+
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="text-slate-500 hover:text-slate-900"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Payment Date
+                </label>
+
+                <input
+                  type="date"
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Amount (₹)
+                </label>
+
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  placeholder="5000"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Payment Mode
+                </label>
+
+                <select
+                  value={paymentMode}
+                  onChange={(e) => setPaymentMode(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Card">Card</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Reference Number
+                </label>
+
+                <input
+                  value={paymentReference}
+                  onChange={(e) => setPaymentReference(e.target.value)}
+                  placeholder="UPI / transaction / cheque number"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Remarks
+                </label>
+
+                <textarea
+                  value={paymentRemarks}
+                  onChange={(e) => setPaymentRemarks(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="rounded-lg border border-slate-300 px-4 py-2"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={addPayment}
+                  disabled={savingPayment}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:bg-slate-400"
+                >
+                  {savingPayment ? "Saving..." : "Record Payment"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fee Configuration Modal */}
+      {showFeeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-bold">
+                {matterFee ? "Edit Fee Configuration" : "Set Fee Configuration"}
+              </h2>
+
+              <button
+                onClick={() => setShowFeeModal(false)}
+                className="text-slate-500 hover:text-slate-900"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Fee Type
+                </label>
+
+                <select
+                  value={feeType}
+                  onChange={(e) => setFeeType(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                >
+                  <option value="Fixed">Fixed</option>
+                  <option value="Daily">Daily</option>
+                  <option value="Hourly">Hourly</option>
+                  <option value="PerAppearance">Per Appearance</option>
+                  <option value="Custom">Custom</option>
+                </select>
+              </div>
+
+              {feeType === "Fixed" && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Fixed Fee (₹)
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={fixedFee}
+                    onChange={(e) => setFixedFee(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+              )}
+
+              {feeType === "Daily" && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Daily Rate (₹)
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={dailyRate}
+                    onChange={(e) => setDailyRate(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+              )}
+
+              {feeType === "Hourly" && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Hourly Rate (₹)
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={hourlyRate}
+                    onChange={(e) => setHourlyRate(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+              )}
+
+              {feeType === "PerAppearance" && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Appearance Rate (₹)
+                  </label>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={appearanceRate}
+                    onChange={(e) => setAppearanceRate(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Notes</label>
+
+                <textarea
+                  value={feeNotes}
+                  onChange={(e) => setFeeNotes(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setShowFeeModal(false)}
+                  className="rounded-lg border border-slate-300 px-4 py-2"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={saveFeeConfiguration}
+                  disabled={savingFee}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-slate-400"
+                >
+                  {savingFee ? "Saving..." : "Save Fee"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Matter Modal */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -1176,6 +2170,18 @@ function EmptyCard({ text }: { text: string }) {
   return (
     <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-slate-500">
       {text}
+    </div>
+  );
+}
+
+function FinancialCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5">
+      <p className="text-sm text-slate-500">{label}</p>
+
+      <p className="mt-2 text-2xl font-bold text-slate-900">
+        ₹{value.toLocaleString("en-IN")}
+      </p>
     </div>
   );
 }

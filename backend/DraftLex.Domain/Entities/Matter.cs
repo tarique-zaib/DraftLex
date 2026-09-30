@@ -40,5 +40,14 @@ public class Matter
     public ICollection<CopilotMessage> CopilotMessages { get; set; }
         = new List<CopilotMessage>();
 
+    public ICollection<MatterFee> Fees { get; set; }
+    = new List<MatterFee>();
+
+    public ICollection<MatterFeeEntry> FeeEntries { get; set; }
+        = new List<MatterFeeEntry>();
+
+    public ICollection<Payment> Payments { get; set; }
+        = new List<Payment>();
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

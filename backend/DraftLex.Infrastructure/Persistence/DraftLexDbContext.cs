@@ -28,6 +28,11 @@ public class DraftLexDbContext : DbContext, IDraftLexDbContext
     public DbSet<LegalDocument> LegalDocuments => Set<LegalDocument>();
     public DbSet<LegalClause> LegalClauses => Set<LegalClause>();
     public DbSet<CopilotMessage> CopilotMessages => Set<CopilotMessage>();
+    public DbSet<MatterFee> MatterFees => Set<MatterFee>();
+
+    public DbSet<MatterFeeEntry> MatterFeeEntries => Set<MatterFeeEntry>();
+
+    public DbSet<Payment> Payments => Set<Payment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
