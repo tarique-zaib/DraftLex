@@ -12,7 +12,11 @@ public class LegalDocument
 
     public string DocumentType { get; set; } = string.Empty;
 
+    // Extracted/editable document text
     public string Content { get; set; } = string.Empty;
+
+    // Physical uploaded filename stored under uploads/evidence
+    public string? StoredFileName { get; set; }
 
     public int Version { get; set; } = 1;
 

@@ -20,17 +20,20 @@ public class DocumentsController : ControllerBase
     private readonly PdfExportService _pdf;
     private readonly IDraftLexDbContext _db;
     private readonly ICurrentUserService _currentUser;
+    private readonly IDocumentTextExtractor _textExtractor;
 
     public DocumentsController(
         LegalDocumentService service,
         PdfExportService pdf,
         IDraftLexDbContext db,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IDocumentTextExtractor textExtractor)
     {
         _service = service;
         _pdf = pdf;
         _db = db;
         _currentUser = currentUser;
+        _textExtractor = textExtractor;
     }
 
     [HttpPost]
@@ -196,7 +199,9 @@ public class DocumentsController : ControllerBase
 
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> Upload([FromForm] UploadEvidenceRequest request)
+    public async Task<IActionResult> Upload(
+    [FromForm] UploadEvidenceRequest request,
+    CancellationToken cancellationToken)
     {
         if (request.File == null || request.File.Length == 0)
             return BadRequest("No file selected.");
@@ -206,16 +211,30 @@ public class DocumentsController : ControllerBase
         if (request.File.Length > maxSize)
             return BadRequest("Maximum file size is 20 MB.");
 
-        var allowed = new[] { ".pdf", ".jpg", ".jpeg", ".png", ".docx" };
+        var allowed = new[]
+        {
+        ".pdf",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".docx"
+    };
 
-        var extension = Path.GetExtension(request.File.FileName).ToLowerInvariant();
+        var extension =
+            Path.GetExtension(request.File.FileName)
+                .ToLowerInvariant();
 
         if (!allowed.Contains(extension))
             return BadRequest("Unsupported file type.");
 
+        // IMPORTANT: verify matter ownership
         var matter = await _db.Matters
             .Include(m => m.Client)
-            .FirstOrDefaultAsync(m => m.Id == request.MatterId);
+            .FirstOrDefaultAsync(
+                m =>
+                    m.Id == request.MatterId &&
+                    m.AdvocateId == _currentUser.UserId,
+                cancellationToken);
 
         if (matter == null)
             return NotFound("Matter not found.");
@@ -227,75 +246,148 @@ public class DocumentsController : ControllerBase
 
         Directory.CreateDirectory(uploadsRoot);
 
-        var fileName = $"{Guid.NewGuid()}{extension}";
-        var filePath = Path.Combine(uploadsRoot, fileName);
+        var storedFileName =
+            $"{Guid.NewGuid()}{extension}";
 
-        await using (var stream = new FileStream(filePath, FileMode.Create))
+        var filePath = Path.Combine(
+            uploadsRoot,
+            storedFileName);
+
+        await using (var stream = new FileStream(
+            filePath,
+            FileMode.CreateNew,
+            FileAccess.Write,
+            FileShare.None))
         {
-            await request.File.CopyToAsync(stream);
+            await request.File.CopyToAsync(
+                stream,
+                cancellationToken);
         }
+
+        string extractedText = string.Empty;
+
+        try
+        {
+            extractedText =
+                await _textExtractor.ExtractTextAsync(
+                    filePath,
+                    extension,
+                    cancellationToken);
+        }
+        catch
+        {
+            // Keep the original file even if extraction fails.
+            extractedText = string.Empty;
+        }
+
+        var hasText =
+            !string.IsNullOrWhiteSpace(extractedText);
+
+        var status =
+            hasText
+                ? "Processed"
+                : extension is ".jpg" or ".jpeg" or ".png"
+                    ? "OCRRequired"
+                    : "Uploaded";
 
         var document = new LegalDocument
         {
             Id = Guid.NewGuid(),
+
             MatterId = request.MatterId,
-            Title = Path.GetFileNameWithoutExtension(request.File.FileName),
+
+            Title = Path.GetFileNameWithoutExtension(
+                request.File.FileName),
+
             DocumentType = "Evidence",
-            Content = fileName,
-            Status = "Uploaded",
+
+            // IMPORTANT:
+            // Content now contains extracted text.
+            Content = extractedText,
+
+            // Physical file name is stored separately.
+            StoredFileName = storedFileName,
+
+            Status = status,
+
             Version = 1,
+
             CreatedAt = DateTime.UtcNow,
+
             UpdatedAt = DateTime.UtcNow
         };
 
         _db.LegalDocuments.Add(document);
 
-        var eventDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        var eventDate =
+            DateTime.SpecifyKind(
+                DateTime.UtcNow,
+                DateTimeKind.Unspecified);
 
         _db.TimelineEvents.Add(new TimelineEvent
         {
             Id = Guid.NewGuid(),
+
             MatterId = request.MatterId,
-            EventType = "DocumentGenerated",
-            Title = "AI Draft Generated",
-            Description = $"{document.DocumentType} generated.",
+
+            EventType = "DocumentUploaded",
+
+            Title = "Evidence Uploaded",
+
+            Description =
+                $"{document.Title} uploaded.",
+
             EventDate = eventDate,
+
             CreatedAt = DateTime.UtcNow
         });
 
-        await _db.SaveChangesAsync();        
+        await _db.SaveChangesAsync(
+            cancellationToken);
 
         return Ok(new
         {
             document.Id,
             document.Title,
             document.DocumentType,
-            document.Status
+            document.Status,
+            hasExtractedText = hasText,
+            document.Version
         });
     }
 
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(
+    Guid id,
+    CancellationToken cancellationToken)
     {
-        var document = await _db.LegalDocuments.FindAsync(id);
+        var document = await _db.LegalDocuments
+            .Include(d => d.Matter)
+            .FirstOrDefaultAsync(
+                d =>
+                    d.Id == id &&
+                    d.Matter.AdvocateId == _currentUser.UserId,
+                cancellationToken);
 
         if (document == null)
             return NotFound();
 
-        if (document.DocumentType == "Evidence")
+        if (!string.IsNullOrWhiteSpace(document.StoredFileName))
         {
             var path = Path.Combine(
                 Directory.GetCurrentDirectory(),
                 "uploads",
                 "evidence",
-                document.Content.Replace("<p>", "").Replace("</p>", "").Trim());
+                document.StoredFileName);
 
             if (System.IO.File.Exists(path))
                 System.IO.File.Delete(path);
         }
 
         _db.LegalDocuments.Remove(document);
-        await _db.SaveChangesAsync();
+
+        await _db.SaveChangesAsync(
+            cancellationToken);
 
         return NoContent();
     }

@@ -6,6 +6,7 @@ using DraftLex.Application.Features.Auth;
 using DraftLex.Application.Interfaces;
 using DraftLex.Application.Services;
 using DraftLex.Infrastructure.AI;
+using DraftLex.Infrastructure.Documents;
 using DraftLex.Infrastructure.Persistence;
 using DraftLex.Infrastructure.Repositories;
 using DraftLex.Infrastructure.Security;
@@ -82,6 +83,7 @@ builder.Services.AddScoped<ClientService>();
 builder.Services.AddScoped<LegalDocumentService>();
 builder.Services.AddScoped<PdfExportService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IDocumentTextExtractor, DocumentTextExtractor>();
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 

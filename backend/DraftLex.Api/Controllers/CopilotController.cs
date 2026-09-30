@@ -23,9 +23,10 @@ public class CopilotController : ControllerBase
         CancellationToken cancellationToken)
     {
         var response = await _copilot.ChatAsync(
-            request.MatterId,
-            request.Message,
-            cancellationToken);
+        request.MatterId,
+        request.Message,
+        request.DocumentIds,
+        cancellationToken);
 
         return Ok(response);
     }

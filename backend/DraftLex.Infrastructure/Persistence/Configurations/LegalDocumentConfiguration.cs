@@ -27,6 +27,9 @@ public class LegalDocumentConfiguration : IEntityTypeConfiguration<LegalDocument
         builder.Property(x => x.Content)
             .HasColumnType("text");
 
+        builder.Property(x => x.StoredFileName)
+            .HasMaxLength(500);
+
         builder.HasOne(x => x.Matter)
             .WithMany(x => x.Documents)
             .HasForeignKey(x => x.MatterId)
