@@ -204,10 +204,28 @@ public class HearingsController : ControllerBase
             })
             .ToListAsync();
 
+        // Weekly chart data is calculated by the API from the same
+        // seven-day window used by the dashboard. This keeps the chart
+        // independent from the number/order of items returned in Today
+        // and Upcoming and prevents the frontend date-boundary logic
+        // from producing an empty chart.
+        var weeklySource = todayHearings
+            .Concat(upcoming)
+            .ToList();
+
+        var weeklyCounts = Enum.GetValues<DayOfWeek>()
+            .Select(day => new DashboardWeeklyHearingDto
+            {
+                Day = day.ToString()[..3],
+                Count = weeklySource.Count(h => h.HearingDate.DayOfWeek == day)
+            })
+            .ToList();
+
         var response = new DashboardResponse
         {
             Today = todayHearings,
             Upcoming = upcoming,
+            Weekly = weeklyCounts,
             Stats = new DashboardStatsDto
             {
                 Clients = await _db.Clients.CountAsync(c => c.AdvocateId == _currentUser.UserId),

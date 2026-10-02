@@ -4,6 +4,7 @@ public class DashboardResponse
 {
     public List<DashboardHearingDto> Today { get; set; } = [];
     public List<DashboardHearingDto> Upcoming { get; set; } = [];
+    public List<DashboardWeeklyHearingDto> Weekly { get; set; } = [];
     public DashboardStatsDto Stats { get; set; } = new();
 }
 
@@ -16,6 +17,12 @@ public class DashboardHearingDto
     public string Court { get; set; } = "";
     public DateTime HearingDate { get; set; }
     public string Stage { get; set; } = "";
+}
+
+public class DashboardWeeklyHearingDto
+{
+    public string Day { get; set; } = "";
+    public int Count { get; set; }
 }
 
 public class DashboardStatsDto
