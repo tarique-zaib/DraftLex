@@ -20,18 +20,23 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ============================================================
+// KESTREL
+// ============================================================
+
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.AddServerHeader = false;
 });
 
-// -------------------------
-// Services
-// -------------------------
+// ============================================================
+// SERVICES
+// ============================================================
 
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
@@ -40,34 +45,32 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v1"
     });
 
-    options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        Description = "Enter only the JWT token"
-    });
+    options.AddSecurityDefinition(
+        JwtBearerDefaults.AuthenticationScheme,
+        new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            In = ParameterLocation.Header,
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "Enter only the JWT token"
+        });
 
-    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-    {
-        [new OpenApiSecuritySchemeReference(JwtBearerDefaults.AuthenticationScheme, document)] = []
-    });
+    options.AddSecurityRequirement(document =>
+        new OpenApiSecurityRequirement
+        {
+            [
+                new OpenApiSecuritySchemeReference(
+                    JwtBearerDefaults.AuthenticationScheme,
+                    document)
+            ] = []
+        });
 });
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("Frontend", policy =>
-    {
-        policy
-            .SetIsOriginAllowed(origin =>
-                origin == "http://localhost:5173" ||
-                origin.StartsWith("https://") && origin.Contains(".devtunnels.ms"))
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
-});
+// ============================================================
+// CORS
+// ============================================================
 
 builder.Services.AddCors(options =>
 {
@@ -75,8 +78,9 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
-                "https://4mf00dhb-5173.inc1.devtunnels.ms",
-                "http://localhost:5173"
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "https://4mf00dhb-5173.inc1.devtunnels.ms"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -84,74 +88,161 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Database
+// ============================================================
+// DATABASE
+// ============================================================
+
 builder.Services.AddDbContext<DraftLexDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DraftLexDb")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DraftLexDb")));
 
 builder.Services.AddScoped<IDraftLexDbContext>(sp =>
     sp.GetRequiredService<DraftLexDbContext>());
 
-// Application Services
+// ============================================================
+// APPLICATION SERVICES
+// ============================================================
+
 builder.Services.AddScoped<IClientRepository, ClientRepository>();
 builder.Services.AddScoped<ILegalDocumentRepository, LegalDocumentRepository>();
+
 builder.Services.AddScoped<ClientService>();
 builder.Services.AddScoped<LegalDocumentService>();
 builder.Services.AddScoped<PdfExportService>();
+
 builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddScoped<IDocumentTextExtractor, DocumentTextExtractor>();
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
+// ============================================================
+// AI
+// ============================================================
+
 builder.Services.Configure<OllamaSettings>(
     builder.Configuration.GetSection("Ollama"));
 
-builder.Services.AddHttpClient<IAILegalDraftService, OllamaLegalDraftService>();
-builder.Services.AddHttpClient<ICopilotService, MatterCopilotService>();
+builder.Services.AddHttpClient<
+    IAILegalDraftService,
+    OllamaLegalDraftService>();
 
-// MediatR
+builder.Services.AddHttpClient<
+    ICopilotService,
+    MatterCopilotService>();
+
+// ============================================================
+// MEDIATR
+// ============================================================
+
 builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssemblyContaining<RegisterAdvocateCommandHandler>());
+    cfg.RegisterServicesFromAssemblyContaining<
+        RegisterAdvocateCommandHandler>());
 
-// JWT Settings
+// ============================================================
+// JWT SETTINGS
+// ============================================================
+
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("Jwt"));
 
-var jwt = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
+var jwt = builder.Configuration
+    .GetSection("Jwt")
+    .Get<JwtSettings>();
 
-// JWT Authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+if (jwt == null)
+{
+    throw new InvalidOperationException(
+        "JWT configuration is missing.");
+}
+
+if (string.IsNullOrWhiteSpace(jwt.Key))
+{
+    throw new InvalidOperationException(
+        "Jwt:Key is missing.");
+}
+
+// ============================================================
+// JWT AUTHENTICATION
+// ============================================================
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.TokenValidationParameters = new TokenValidationParameters
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+
+                ValidIssuer = jwt.Issuer,
+                ValidAudience = jwt.Audience,
+
+                IssuerSigningKey =
+                    new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(jwt.Key)),
+
+                ClockSkew = TimeSpan.FromMinutes(1)
+            };
+
+        // Useful for debugging JWT authentication
+        options.Events = new JwtBearerEvents
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwt.Issuer,
-            ValidAudience = jwt.Audience,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwt.Key))
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine(
+                    $"JWT Authentication Failed: " +
+                    $"{context.Exception.Message}");
+
+                return Task.CompletedTask;
+            },
+
+            OnTokenValidated = context =>
+            {
+                Console.WriteLine(
+                    "JWT Token validated successfully.");
+
+                return Task.CompletedTask;
+            },
+
+            OnChallenge = context =>
+            {
+                Console.WriteLine(
+                    $"JWT Challenge: {context.Error} " +
+                    $"{context.ErrorDescription}");
+
+                return Task.CompletedTask;
+            }
         };
     });
 
 builder.Services.AddAuthorization();
 
-// JWT Service
+// ============================================================
+// JWT SERVICE
+// ============================================================
+
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
-// -------------------------
-// Build
-// -------------------------
+// ============================================================
+// BUILD
+// ============================================================
 
 var app = builder.Build();
 
-app.UseCors("Frontend");
+// ============================================================
+// CORS
+// IMPORTANT: Must be before Authentication/Authorization
+// ============================================================
+
 app.UseCors("DraftLexFrontend");
 
-// -------------------------
-// Middleware
-// -------------------------
+// ============================================================
+// SWAGGER
+// ============================================================
 
 if (app.Environment.IsDevelopment())
 {
@@ -163,30 +254,65 @@ else
     app.UseHsts();
 }
 
+// ============================================================
+// HTTPS
+// ============================================================
+
 app.UseHttpsRedirection();
+
+// ============================================================
+// SECURITY HEADERS
+// ============================================================
 
 app.Use(async (context, next) =>
 {
-    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-    context.Response.Headers["X-Frame-Options"] = "DENY";
-    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["X-Content-Type-Options"] =
+        "nosniff";
+
+    context.Response.Headers["X-Frame-Options"] =
+        "DENY";
+
+    context.Response.Headers["Referrer-Policy"] =
+        "strict-origin-when-cross-origin";
+
     context.Response.Headers["Permissions-Policy"] =
         "camera=(), microphone=(), geolocation=()";
 
     context.Response.Headers["Content-Security-Policy"] =
         "default-src 'self'; " +
-        "img-src 'self' data: http://localhost:5073; " +
+
+        "img-src 'self' data: " +
+        "http://localhost:5073 " +
+        "https://4mf00dhb-5073.inc1.devtunnels.ms; " +
+
         "style-src 'self' 'unsafe-inline'; " +
+
         "script-src 'self'; " +
+
         "font-src 'self' data:; " +
-        "connect-src 'self' http://localhost:5173 http://localhost:5073; " +
+
+        "connect-src 'self' " +
+        "http://localhost:5173 " +
+        "http://127.0.0.1:5173 " +
+        "http://localhost:5073 " +
+        "https://4mf00dhb-5073.inc1.devtunnels.ms; " +
+
         "frame-ancestors 'none';";
 
     await next();
 });
 
+// ============================================================
+// AUTHENTICATION / AUTHORIZATION
+// ============================================================
+
 app.UseAuthentication();
+
 app.UseAuthorization();
+
+// ============================================================
+// UPLOADS
+// ============================================================
 
 var evidencePath = Path.Combine(
     Directory.GetCurrentDirectory(),
@@ -196,12 +322,26 @@ Directory.CreateDirectory(evidencePath);
 
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(evidencePath),
+    FileProvider =
+        new PhysicalFileProvider(evidencePath),
+
     RequestPath = "/uploads"
 });
 
+// ============================================================
+// EXCEPTION MIDDLEWARE
+// ============================================================
+
 app.UseMiddleware<ExceptionMiddleware>();
 
+// ============================================================
+// CONTROLLERS
+// ============================================================
+
 app.MapControllers();
+
+// ============================================================
+// RUN
+// ============================================================
 
 app.Run();
