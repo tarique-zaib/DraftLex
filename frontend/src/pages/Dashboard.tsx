@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { ReactNode } from "react";
 import {
   Users,
@@ -67,6 +67,15 @@ export default function Dashboard() {
 
   const [todayHearings, setTodayHearings] = useState<any[]>([]);
   const [upcomingHearings, setUpcomingHearings] = useState<any[]>([]);
+  const [weeklyData, setWeeklyData] = useState<{ day: string; count: number }[]>([
+    { day: "Sun", count: 0 },
+    { day: "Mon", count: 0 },
+    { day: "Tue", count: 0 },
+    { day: "Wed", count: 0 },
+    { day: "Thu", count: 0 },
+    { day: "Fri", count: 0 },
+    { day: "Sat", count: 0 },
+  ]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -107,16 +116,7 @@ export default function Dashboard() {
 
         setTodayHearings(data.today || []);
         setUpcomingHearings(data.upcoming || []);
-
-        setStats({
-          clients: data.stats.clients,
-          matters: data.stats.activeMatters,
-          hearings: data.stats.hearings,
-          documents: data.stats.documents,
-        });
-
-        setTodayHearings(data.today || []);
-        setUpcomingHearings(data.upcoming || []);
+        setWeeklyData(data.weekly || []);
 
         setStats({
           clients: data.stats.clients,
@@ -233,40 +233,6 @@ export default function Dashboard() {
   const unreadCount = recentActivity.filter(
     (a) => !readIds.includes(a.id),
   ).length;
-
-  console.log("Upcoming Hearings:", upcomingHearings);
-
-  const weeklyData = useMemo(() => {
-    const counts = [0, 0, 0, 0, 0, 0, 0];
-
-    const allHearings = [...todayHearings, ...upcomingHearings];
-
-    const startOfWeek = new Date();
-    startOfWeek.setHours(0, 0, 0, 0);
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Sunday
-
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(endOfWeek.getDate() + 7);
-
-    allHearings.forEach((h: any) => {
-      const hearingDate = new Date(h.hearingDate);
-      hearingDate.setHours(0, 0, 0, 0);
-
-      if (hearingDate >= startOfWeek && hearingDate < endOfWeek) {
-        counts[hearingDate.getDay()]++;
-      }
-    });
-
-    return [
-      { day: "Sun", count: counts[0] },
-      { day: "Mon", count: counts[1] },
-      { day: "Tue", count: counts[2] },
-      { day: "Wed", count: counts[3] },
-      { day: "Thu", count: counts[4] },
-      { day: "Fri", count: counts[5] },
-      { day: "Sat", count: counts[6] },
-    ];
-  }, [todayHearings, upcomingHearings]);
 
   const maxCount = Math.max(...weeklyData.map((d) => d.count), 1);
 
