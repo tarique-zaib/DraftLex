@@ -1,0 +1,36 @@
+# ============================================
+# DraftLex - ASP.NET Core .NET 10
+# Vercel Container Deployment
+# ============================================
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+
+WORKDIR /src
+
+COPY backend/DraftLex.Api/DraftLex.Api.csproj backend/DraftLex.Api/
+COPY backend/DraftLex.Application/DraftLex.Application.csproj backend/DraftLex.Application/
+COPY backend/DraftLex.Infrastructure/DraftLex.Infrastructure.csproj backend/DraftLex.Infrastructure/
+
+RUN dotnet restore backend/DraftLex.Api/DraftLex.Api.csproj
+
+COPY backend/ backend/
+
+RUN dotnet publish backend/DraftLex.Api/DraftLex.Api.csproj \
+    -c Release \
+    -o /app/publish \
+    --no-restore
+
+
+# ============================================
+# Runtime
+# ============================================
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+
+WORKDIR /app
+
+COPY --from=build /app/publish .
+
+ENV ASPNETCORE_ENVIRONMENT=Production
+
+CMD ["sh", "-c", "ASPNETCORE_URLS=http://0.0.0.0:${PORT:-8080} dotnet DraftLex.Api.dll"]
