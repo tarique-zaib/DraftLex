@@ -7,14 +7,19 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 WORKDIR /src
 
+# Copy project files first for better Docker layer caching
 COPY backend/DraftLex.Api/DraftLex.Api.csproj backend/DraftLex.Api/
 COPY backend/DraftLex.Application/DraftLex.Application.csproj backend/DraftLex.Application/
 COPY backend/DraftLex.Infrastructure/DraftLex.Infrastructure.csproj backend/DraftLex.Infrastructure/
+COPY backend/DraftLex.Domain/DraftLex.Domain.csproj backend/DraftLex.Domain/
 
+# Restore all project dependencies
 RUN dotnet restore backend/DraftLex.Api/DraftLex.Api.csproj
 
+# Copy complete backend source
 COPY backend/ backend/
 
+# Publish API
 RUN dotnet publish backend/DraftLex.Api/DraftLex.Api.csproj \
     -c Release \
     -o /app/publish \
