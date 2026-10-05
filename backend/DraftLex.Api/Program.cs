@@ -80,7 +80,8 @@ builder.Services.AddCors(options =>
             .WithOrigins(
                 "http://localhost:5173",
                 "http://127.0.0.1:5173",
-                "https://4mf00dhb-5173.inc1.devtunnels.ms"
+                "https://4mf00dhb-5173.inc1.devtunnels.ms",
+                "https://draft-lex-ten.vercel.app"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -283,7 +284,8 @@ app.Use(async (context, next) =>
 
         "img-src 'self' data: " +
         "http://localhost:5073 " +
-        "https://4mf00dhb-5073.inc1.devtunnels.ms; " +
+        "https://4mf00dhb-5073.inc1.devtunnels.ms " +
+        "https://draftlex-backend.vercel.app; " +
 
         "style-src 'self' 'unsafe-inline'; " +
 
@@ -296,6 +298,7 @@ app.Use(async (context, next) =>
         "http://127.0.0.1:5173 " +
         "http://localhost:5073 " +
         "https://4mf00dhb-5073.inc1.devtunnels.ms; " +
+        "https://draftlex-backend.vercel.app; " +
 
         "frame-ancestors 'none';";
 
